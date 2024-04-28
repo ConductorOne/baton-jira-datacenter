@@ -1,0 +1,56 @@
+version: '3'
+services:
+  jira_node_1:
+    depends_on:
+      - postgresql
+    image: atlassian/jira-software:9.12.4
+    networks:
+      - jiranet
+    volumes:
+      - ./dev/jira-data:/var/atlassian/application-data/jira/shared
+    ports:
+      - '8080:8080'
+      - '8000:8000'
+    environment:
+      - 'ATL_JDBC_URL=jdbc:postgresql://postgresql:5432/jiradb'
+      - 'ATL_JDBC_USER=jira'
+      - 'ATL_JDBC_PASSWORD=jira'
+      - 'ATL_DB_DRIVER=org.postgresql.Driver'
+      - 'ATL_DB_TYPE=postgres72'
+      - 'JVM_MINIMUM_MEMORY=2048m'
+      - 'JVM_MAXIMUM_MEMORY=4096m'
+      - 'JVM_SUPPORT_RECOMMENDED_ARGS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000"'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "500k"
+        max-file: "50"
+
+  postgresql:
+    image: postgres:9.5-alpine
+    networks:
+      - jiranet
+    volumes:
+      - baton-jira-postgresqldata:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    environment:
+      - 'POSTGRES_USER=jira'
+      - 'POSTGRES_PASSWORD=jira'
+      - 'POSTGRES_DB=jiradb'
+      - 'POSTGRES_ENCODING=UNICODE'
+      - 'POSTGRES_COLLATE=C'
+      - 'POSTGRES_COLLATE_TYPE=C'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "500k"
+        max-file: "50"
+
+volumes:
+  baton-jira-postgresqldata:
+    external: false
+
+networks:
+  jiranet:
+    driver: bridge
