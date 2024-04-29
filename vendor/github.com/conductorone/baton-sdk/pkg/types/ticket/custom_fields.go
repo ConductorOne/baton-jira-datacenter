@@ -2,37 +2,119 @@ package ticket
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 )
 
-func mapCustomFields(fields []*v2.TicketCustomField) (map[string]*v2.TicketCustomField, error) {
-	customFields := make(map[string]*v2.TicketCustomField)
-	for _, cf := range fields {
-		if _, ok := customFields[cf.Id]; ok {
-			return nil, fmt.Errorf("error: duplicate key found in custom fields: %s", cf.Id)
+func CustomFieldForSchemaField(id string, fields map[string]*v2.TicketCustomField, value interface{}) (*v2.TicketCustomField, error) {
+	field, ok := fields[id]
+	if !ok {
+		return nil, fmt.Errorf("error: id(%s) not found in schema", id)
+	}
+
+	switch field.GetValue().(type) {
+	case *v2.TicketCustomField_StringValue:
+		v, ok := value.(string)
+		if !ok {
+			return nil, fmt.Errorf("unexpected value type for custom field: %s %T", id, v)
+		}
+		return StringField(id, v), nil
+
+	case *v2.TicketCustomField_StringValues:
+		v, ok := value.([]string)
+		if !ok {
+			return nil, fmt.Errorf("unexpected value type for custom field: %s %T", id, v)
+		}
+		return StringsField(id, v), nil
+
+	case *v2.TicketCustomField_BoolValue:
+		v, ok := value.(bool)
+		if !ok {
+			return nil, fmt.Errorf("unexpected value type for custom field: %s %T", id, v)
+		}
+		return BoolField(id, v), nil
+
+	case *v2.TicketCustomField_TimestampValue:
+		v, ok := value.(*timestamppb.Timestamp)
+		if !ok {
+			return nil, fmt.Errorf("unexpected value type for custom field: %s %T", id, v)
+		}
+		return TimestampField(id, v.AsTime()), nil
+
+	case *v2.TicketCustomField_PickStringValue:
+		v, ok := value.(string)
+		if !ok {
+			return nil, fmt.Errorf("unexpected value type for custom field: %s %T", id, v)
+		}
+		return PickStringField(id, v), nil
+
+	case *v2.TicketCustomField_PickMultipleStringValues:
+		v, ok := value.([]string)
+		if !ok {
+			return nil, fmt.Errorf("unexpected value type for custom field: %s %T", id, v)
+		}
+		return PickMultipleStringsField(id, v), nil
+
+	case *v2.TicketCustomField_PickObjectValue:
+		v, ok := value.(interface{})
+		if !ok {
+			return nil, fmt.Errorf("unexpected value type for custom field: %s %T", id, v)
 		}
 
-		customFields[cf.Id] = cf
-	}
+		rawBytes, err := json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
 
-	return customFields, nil
+		ov := &v2.TicketCustomFieldObjectValue{}
+		err = protojson.Unmarshal(rawBytes, ov)
+		if err != nil {
+			return nil, err
+		}
+
+		return PickObjectValueField(id, ov), nil
+
+	case *v2.TicketCustomField_PickMultipleObjectValues:
+		vs, ok := value.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("unexpected value type for custom field: %s %T", id, vs)
+		}
+
+		var ret []*v2.TicketCustomFieldObjectValue
+
+		for _, v := range vs {
+			rawBytes, err := json.Marshal(v)
+			if err != nil {
+				return nil, err
+			}
+
+			ov := &v2.TicketCustomFieldObjectValue{}
+			err = protojson.Unmarshal(rawBytes, ov)
+			if err != nil {
+				return nil, err
+			}
+
+			ret = append(ret, ov)
+		}
+
+		return PickMultipleObjectValuesField(id, ret), nil
+
+	default:
+		return nil, errors.New("error: unknown custom field type")
+	}
 }
 
-func GetCustomFieldValue(id string, fields []*v2.TicketCustomField) (interface{}, error) {
-	m, err := mapCustomFields(fields)
-	if err != nil {
-		return nil, err
-	}
-
-	field, ok := m[id]
+func GetCustomFieldValue(id string, fields map[string]*v2.TicketCustomField) (interface{}, error) {
+	field, ok := fields[id]
 	if !ok {
 		return nil, nil
 	}
@@ -91,11 +173,11 @@ func ValidateTicket(ctx context.Context, schema *v2.TicketSchema, ticket *v2.Tic
 	// Look for a matching ticket type
 	foundMatch = true
 	for _, tType := range schema.GetTypes() {
-		if ticket.TicketType == nil {
+		if ticket.Type == nil {
 			l.Debug("error: invalid ticket: ticket type is not set")
 			return false, nil
 		}
-		if ticket.TicketType.GetId() == tType.GetId() {
+		if ticket.Type.GetId() == tType.GetId() {
 			foundMatch = true
 			break
 		}
@@ -106,15 +188,8 @@ func ValidateTicket(ctx context.Context, schema *v2.TicketSchema, ticket *v2.Tic
 		return false, nil
 	}
 
-	schemaCustomFields, err := mapCustomFields(schema.GetCustomFields())
-	if err != nil {
-		return false, err
-	}
-
-	ticketCustomFields, err := mapCustomFields(ticket.GetCustomFields())
-	if err != nil {
-		return false, err
-	}
+	schemaCustomFields := schema.GetCustomFields()
+	ticketCustomFields := ticket.GetCustomFields()
 
 	for id, cf := range schemaCustomFields {
 		ticketCf, ok := ticketCustomFields[id]

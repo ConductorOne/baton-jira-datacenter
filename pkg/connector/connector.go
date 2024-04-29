@@ -12,7 +12,8 @@ import (
 )
 
 type Connector struct {
-	jiraClient *client.Client
+	jiraClient   *client.Client
+	ticketSchema *v2.TicketSchema
 }
 
 // ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.

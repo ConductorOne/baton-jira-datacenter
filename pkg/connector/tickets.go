@@ -15,8 +15,12 @@ import (
 )
 
 func (d *Connector) GetTicketSchema(ctx context.Context) (*v2.TicketSchema, annotations.Annotations, error) {
+	if d.ticketSchema != nil {
+		return d.ticketSchema, nil, nil
+	}
+
 	var ticketTypes []*v2.TicketType
-	var customFields []*v2.TicketCustomField
+	customFields := make(map[string]*v2.TicketCustomField)
 
 	projects, err := d.jiraClient.ListProjects(ctx)
 	if err != nil {
@@ -60,24 +64,18 @@ func (d *Connector) GetTicketSchema(ctx context.Context) (*v2.TicketSchema, anno
 	}
 
 	// Add a required field for the project
-	customFields = append(
-		customFields,
-		sdkTicket.PickObjectValueFieldSchema(
-			"project",
-			"Project",
-			true,
-			projectIDs,
-		),
+	customFields["project"] = sdkTicket.PickObjectValueFieldSchema(
+		"project",
+		"Project",
+		true,
+		projectIDs,
 	)
 
-	customFields = append(
-		customFields,
-		sdkTicket.PickMultipleObjectValuesFieldSchema(
-			"components",
-			"Components",
-			false,
-			components,
-		),
+	customFields["components"] = sdkTicket.PickMultipleObjectValuesFieldSchema(
+		"components",
+		"Components",
+		false,
+		components,
 	)
 
 	ret := &v2.TicketSchema{
@@ -85,6 +83,8 @@ func (d *Connector) GetTicketSchema(ctx context.Context) (*v2.TicketSchema, anno
 		Statuses:     ticketStatuses,
 		CustomFields: customFields,
 	}
+
+	d.ticketSchema = ret
 
 	return ret, nil, nil
 }
@@ -126,7 +126,7 @@ func (d *Connector) issueToTicket(ctx context.Context, issue *jira.Issue) (*v2.T
 		Id:          issue.ID,
 		DisplayName: issue.Fields.Summary,
 		Description: issue.Fields.Description,
-		TicketType: &v2.TicketType{
+		Type: &v2.TicketType{
 			Id:          issue.Fields.Type.ID,
 			DisplayName: issue.Fields.Type.Name,
 		},
@@ -151,15 +151,14 @@ func (d *Connector) issueToTicket(ctx context.Context, issue *jira.Issue) (*v2.T
 		}
 	}
 
-	retCustomFields := make([]*v2.TicketCustomField, 0, len(schema.GetCustomFields()))
-	for _, cf := range schema.GetCustomFields() {
-		switch cf.GetId() {
+	retCustomFields := make(map[string]*v2.TicketCustomField)
+	for id, cf := range schema.GetCustomFields() {
+		switch id {
 		case "project":
-			newCf := sdkTicket.PickObjectValueField(cf.GetId(), &v2.TicketCustomFieldObjectValue{
+			retCustomFields[id] = sdkTicket.PickObjectValueField(cf.GetId(), &v2.TicketCustomFieldObjectValue{
 				Id:          issue.Fields.Project.ID,
 				DisplayName: issue.Fields.Project.Name,
 			})
-			retCustomFields = append(retCustomFields, newCf)
 		case "components":
 			var components []*v2.TicketCustomFieldObjectValue
 			for _, component := range issue.Fields.Components {
@@ -168,8 +167,7 @@ func (d *Connector) issueToTicket(ctx context.Context, issue *jira.Issue) (*v2.T
 					DisplayName: component.Name,
 				})
 			}
-			newCf := sdkTicket.PickMultipleObjectValuesField(cf.GetId(), components)
-			retCustomFields = append(retCustomFields, newCf)
+			retCustomFields[id] = sdkTicket.PickMultipleObjectValuesField(cf.GetId(), components)
 		}
 	}
 	ret.CustomFields = retCustomFields
@@ -217,7 +215,7 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket) (*v2.Ti
 	}
 
 	ticketOptions := []client.FieldOption{
-		client.WithType(ticket.GetTicketType().GetId()),
+		client.WithType(ticket.GetType().GetId()),
 		client.WithDescription(ticket.GetDescription()),
 		client.WithLabels(ticket.GetLabels()...),
 	}
