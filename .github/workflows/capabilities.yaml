@@ -21,7 +21,7 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: Build
-        run: go build -o connector ./cmd/baton-jira-datacenter
+        run: go build -o connector ./cmd/baton-client-datacenter
 
       - name: Run and save output
         run: ./connector capabilities > baton_capabilities.json

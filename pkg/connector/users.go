@@ -3,12 +3,37 @@ package connector
 import (
 	"context"
 
+	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
+	sdkResource "github.com/conductorone/baton-sdk/pkg/types/resource"
+
+	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 )
 
-type userBuilder struct{}
+type userBuilder struct {
+	client *client.Client
+}
+
+func userResource(u jira.User) (*v2.Resource, error) {
+	var userTraitOpts []sdkResource.UserTraitOption
+
+	if u.Key == "" {
+		return nil, nil
+	}
+
+	if u.EmailAddress != "" {
+		userTraitOpts = append(userTraitOpts, sdkResource.WithEmail(u.EmailAddress, true))
+	}
+
+	ret, err := sdkResource.NewUserResource(u.DisplayName, userResourceType, u.Key, userTraitOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}
 
 func (o *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 	return userResourceType
@@ -30,6 +55,8 @@ func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 	return nil, "", nil, nil
 }
 
-func newUserBuilder() *userBuilder {
-	return &userBuilder{}
+func newUserBuilder(client *client.Client) *userBuilder {
+	return &userBuilder{
+		client: client,
+	}
 }

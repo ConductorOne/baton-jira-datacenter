@@ -1,20 +1,20 @@
-project_name: baton-jira-datacenter
+project_name: baton-client-datacenter
 builds:
-  - binary: baton-jira-datacenter
+  - binary: baton-client-datacenter
     env:
       - CGO_ENABLED=0
     id: linux
-    main: ./cmd/baton-jira-datacenter
+    main: ./cmd/baton-client-datacenter
     goos:
       - linux
     goarch:
       - amd64
       - arm64
-  - binary: baton-jira-datacenter
+  - binary: baton-client-datacenter
     env:
       - CGO_ENABLED=0
     id: macos-amd64
-    main: ./cmd/baton-jira-datacenter
+    main: ./cmd/baton-client-datacenter
     goos:
       - darwin
     goarch:
@@ -22,12 +22,12 @@ builds:
     hooks:
       post:
         - gon .gon-amd64.json
-        - mv dist/baton-jira-datacenter-darwin-amd64.signed.zip dist/macos-amd64_darwin_amd64_v1/baton-jira-datacenter
-  - binary: baton-jira-datacenter
+        - mv dist/baton-client-datacenter-darwin-amd64.signed.zip dist/macos-amd64_darwin_amd64_v1/baton-client-datacenter
+  - binary: baton-client-datacenter
     env:
       - CGO_ENABLED=0
     id: macos-arm64
-    main: ./cmd/baton-jira-datacenter
+    main: ./cmd/baton-client-datacenter
     goos:
       - darwin
     goarch:
@@ -35,7 +35,7 @@ builds:
     hooks:
       post:
         - gon .gon-arm64.json
-        - mv dist/baton-jira-datacenter-darwin-arm64.signed.zip dist/macos-arm64_darwin_arm64/baton-jira-datacenter
+        - mv dist/baton-client-datacenter-darwin-arm64.signed.zip dist/macos-arm64_darwin_arm64/baton-client-datacenter
 archives:
   - id: linux-archive
     builds:

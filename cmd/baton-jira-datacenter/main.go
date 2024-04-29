@@ -20,13 +20,15 @@ func main() {
 	ctx := context.Background()
 
 	cfg := &config{}
-	cmd, err := cli.NewCmd(ctx, "baton-jira-datacenter", cfg, validateConfig, getConnector)
+	cmd, err := cli.NewCmd(ctx, "baton-client-datacenter", cfg, validateConfig, getConnector)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 
 	cmd.Version = version
+
+	cmdFlags(cmd)
 
 	err = cmd.Execute()
 	if err != nil {
@@ -38,7 +40,7 @@ func main() {
 func getConnector(ctx context.Context, cfg *config) (types.ConnectorServer, error) {
 	l := ctxzap.Extract(ctx)
 
-	cb, err := connector.New(ctx)
+	cb, err := connector.New(ctx, cfg.InstanceURL, cfg.AccessToken)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err
