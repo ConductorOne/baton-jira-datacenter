@@ -4,7 +4,7 @@ go 1.22.2
 
 require (
 	github.com/andygrunwald/go-jira/v2 v2.0.0-20240419124508-6752705de4c7
-	github.com/conductorone/baton-sdk v0.1.33
+	github.com/conductorone/baton-sdk v0.1.34-0.20240429070603-76cdbefff6d5
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/spf13/cobra v1.8.0
 	go.uber.org/zap v1.27.0
@@ -94,5 +94,3 @@ require (
 	modernc.org/memory v1.8.0 // indirect
 	modernc.org/sqlite v1.29.8 // indirect
 )
-
-replace github.com/conductorone/baton-sdk => ../baton-sdk
