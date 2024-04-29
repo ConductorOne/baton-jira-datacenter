@@ -244,11 +244,11 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket) (*v2.Ti
 			if !ok {
 				return nil, nil, errors.New("error: unable to create ticket, components are required")
 			}
-			componentIds := make([]string, 0, len(comps))
+			componentIDs := make([]string, 0, len(comps))
 			for _, component := range comps {
-				componentIds = append(componentIds, component.GetId())
+				componentIDs = append(componentIDs, component.GetId())
 			}
-			ticketOptions = append(ticketOptions, client.WithComponents(componentIds...))
+			ticketOptions = append(ticketOptions, client.WithComponents(componentIDs...))
 
 		default:
 			val, err := sdkTicket.GetCustomFieldValue(ticketFields[id])
