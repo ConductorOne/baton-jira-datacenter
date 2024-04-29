@@ -35,6 +35,7 @@ func (d *Connector) GetTicketSchema(ctx context.Context) (*v2.TicketSchema, anno
 			DisplayName: project.Name,
 		})
 		for _, issueType := range project.IssueTypes {
+			// TODO: Maybe we care about subtasks?
 			if !issueType.Subtask {
 				ticketTypes = append(ticketTypes, &v2.TicketType{
 					Id:          issueType.ID,
@@ -93,7 +94,6 @@ func (d *Connector) issueToTicket(ctx context.Context, issue *jira.Issue) (*v2.T
 	if issue.Fields == nil {
 		return nil, errors.New("issue has no fields")
 	}
-
 	schema, _, err := d.GetTicketSchema(ctx)
 	if err != nil {
 		return nil, err
@@ -206,34 +206,28 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket) (*v2.Ti
 		return nil, nil, err
 	}
 
-	valid, err := sdkTicket.ValidateTicket(ctx, schema, ticket)
-	if err != nil {
-		return nil, nil, err
-	}
-	if !valid {
-		return nil, nil, errors.New("error: unable to create ticket, ticket is invalid")
-	}
-
 	ticketOptions := []client.FieldOption{
 		client.WithType(ticket.GetType().GetId()),
 		client.WithDescription(ticket.GetDescription()),
 		client.WithLabels(ticket.GetLabels()...),
 	}
 
-	ticketFields := make(map[string]*v2.TicketCustomField)
-	for _, cf := range ticket.GetCustomFields() {
-		ticketFields[cf.GetId()] = cf
-	}
+	ticketFields := ticket.GetCustomFields()
 
 	var projectID string
 
-	for _, cf := range schema.GetCustomFields() {
-		switch cf.GetId() {
+	for id, cf := range schema.GetCustomFields() {
+		switch id {
 		case "project":
-			val, err := sdkTicket.GetCustomFieldValue(cf.GetId(), ticket.GetCustomFields())
+			val, err := sdkTicket.GetCustomFieldValue(ticketFields[id])
 			if err != nil {
 				return nil, nil, err
 			}
+
+			if val == nil {
+				return nil, nil, errors.New("error: unable to create ticket, project is required")
+			}
+
 			project, ok := val.(*v2.TicketCustomFieldObjectValue)
 			if !ok || project.GetId() == "" {
 				return nil, nil, errors.New("error: unable to create ticket, project is required")
@@ -242,7 +236,7 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket) (*v2.Ti
 			projectID = project.GetId()
 
 		case "components":
-			val, err := sdkTicket.GetCustomFieldValue(cf.GetId(), ticket.GetCustomFields())
+			val, err := sdkTicket.GetCustomFieldValue(ticketFields[id])
 			if err != nil {
 				return nil, nil, err
 			}
@@ -257,7 +251,7 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket) (*v2.Ti
 			ticketOptions = append(ticketOptions, client.WithComponents(componentIds...))
 
 		default:
-			val, err := sdkTicket.GetCustomFieldValue(cf.GetId(), ticket.GetCustomFields())
+			val, err := sdkTicket.GetCustomFieldValue(ticketFields[id])
 			if err != nil {
 				return nil, nil, err
 			}
@@ -269,6 +263,14 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket) (*v2.Ti
 
 			ticketOptions = append(ticketOptions, client.WithCustomField(cf.GetId(), val))
 		}
+	}
+
+	valid, err := sdkTicket.ValidateTicket(ctx, schema, ticket)
+	if err != nil {
+		return nil, nil, err
+	}
+	if !valid {
+		return nil, nil, errors.New("error: unable to create ticket, ticket is invalid")
 	}
 
 	iss, err := d.jiraClient.CreateIssue(ctx, projectID, ticket.GetDisplayName(), ticketOptions...)
