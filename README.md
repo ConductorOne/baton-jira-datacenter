@@ -7,6 +7,6 @@ It is recommended that you run this on a linux amd64 machine. This is due to the
 
 ### Start Jira Data Center
 ```bash
-mkdir -p dev/client-data
+mkdir -p dev/jira-data
 docker-compose up
 ```
