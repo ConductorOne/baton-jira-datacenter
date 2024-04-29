@@ -20,7 +20,7 @@ func main() {
 	ctx := context.Background()
 
 	cfg := &config{}
-	cmd, err := cli.NewCmd(ctx, "baton-client-datacenter", cfg, validateConfig, getConnector)
+	cmd, err := cli.NewCmd(ctx, "baton-jira-datacenter", cfg, validateConfig, getConnector)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
