@@ -3,64 +3,80 @@ package connector
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
+	"github.com/conductorone/baton-sdk/pkg/pagination"
 	sdkTicket "github.com/conductorone/baton-sdk/pkg/types/ticket"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 )
 
-func (d *Connector) GetTicketSchema(ctx context.Context) (*v2.TicketSchema, annotations.Annotations, error) {
-	if d.ticketSchema != nil {
-		return d.ticketSchema, nil, nil
-	}
-
-	var ticketTypes []*v2.TicketType
-	customFields := make(map[string]*v2.TicketCustomField)
+func (d *Connector) ListTicketSchemas(ctx context.Context, pToken *pagination.Token) ([]*v2.TicketSchema, string, annotations.Annotations, error) {
+	var ret []*v2.TicketSchema
 
 	projects, err := d.jiraClient.ListProjects(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, "", nil, err
 	}
-	var projectIDs []*v2.TicketCustomFieldObjectValue
-	var components []*v2.TicketCustomFieldObjectValue
 
 	for _, project := range projects {
-		projectIDs = append(projectIDs, &v2.TicketCustomFieldObjectValue{
-			Id:          project.ID,
-			DisplayName: project.Name,
-		})
-		for _, issueType := range project.IssueTypes {
-			// TODO: Maybe we care about subtasks?
-			if !issueType.Subtask {
-				ticketTypes = append(ticketTypes, &v2.TicketType{
-					Id:          issueType.ID,
-					DisplayName: issueType.Name,
-				})
-			}
+		schema, err := d.schemaForProject(ctx, project)
+		if err != nil {
+			return nil, "", nil, err
 		}
-		for _, component := range project.Components {
-			components = append(components, &v2.TicketCustomFieldObjectValue{
-				Id:          component.ID,
-				DisplayName: component.Name,
-			})
-		}
+		ret = append(ret, schema)
+	}
+
+	return ret, "", nil, nil
+}
+
+func (d *Connector) getTicketStatuses(ctx context.Context) ([]*v2.TicketStatus, error) {
+	if d.ticketStatuses != nil {
+		return d.ticketStatuses, nil
 	}
 
 	statuses, err := d.jiraClient.ListStatuses(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	ticketStatuses := make([]*v2.TicketStatus, 0, len(statuses))
+	ret := make([]*v2.TicketStatus, 0, len(statuses))
 	for _, status := range statuses {
-		ticketStatuses = append(ticketStatuses, &v2.TicketStatus{
+		ret = append(ret, &v2.TicketStatus{
 			Id:          status.ID,
 			DisplayName: status.Name,
+		})
+	}
+
+	d.ticketStatuses = ret
+
+	return ret, nil
+}
+
+func (d *Connector) schemaForProject(ctx context.Context, project *jira.Project) (*v2.TicketSchema, error) {
+	var ticketTypes []*v2.TicketType
+	customFields := make(map[string]*v2.TicketCustomField)
+
+	var components []*v2.TicketCustomFieldObjectValue
+
+	for _, issueType := range project.IssueTypes {
+		// TODO: Maybe we care about subtasks?
+		if !issueType.Subtask {
+			ticketTypes = append(ticketTypes, &v2.TicketType{
+				Id:          issueType.ID,
+				DisplayName: issueType.Name,
+			})
+		}
+	}
+	for _, component := range project.Components {
+		components = append(components, &v2.TicketCustomFieldObjectValue{
+			Id:          component.ID,
+			DisplayName: component.Name,
 		})
 	}
 
@@ -69,7 +85,12 @@ func (d *Connector) GetTicketSchema(ctx context.Context) (*v2.TicketSchema, anno
 		"project",
 		"Project",
 		true,
-		projectIDs,
+		[]*v2.TicketCustomFieldObjectValue{
+			{
+				Id:          project.ID,
+				DisplayName: project.Name,
+			},
+		},
 	)
 
 	customFields["components"] = sdkTicket.PickMultipleObjectValuesFieldSchema(
@@ -80,12 +101,39 @@ func (d *Connector) GetTicketSchema(ctx context.Context) (*v2.TicketSchema, anno
 	)
 
 	ret := &v2.TicketSchema{
+		Id:           project.Key,
+		DisplayName:  project.Name,
 		Types:        ticketTypes,
-		Statuses:     ticketStatuses,
 		CustomFields: customFields,
 	}
 
-	d.ticketSchema = ret
+	statuses, err := d.getTicketStatuses(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ret.Statuses = statuses
+
+	d.ticketSchemas[project.Key] = ret
+
+	return ret, nil
+}
+
+func (d *Connector) GetTicketSchema(ctx context.Context, schemaID string) (*v2.TicketSchema, annotations.Annotations, error) {
+	if schema, ok := d.ticketSchemas[schemaID]; ok {
+		return schema, nil, nil
+	}
+
+	fmt.Println("schemaID", schemaID)
+
+	project, err := d.jiraClient.GetProject(ctx, schemaID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret, err := d.schemaForProject(ctx, project)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return ret, nil, nil
 }
@@ -94,7 +142,7 @@ func (d *Connector) issueToTicket(ctx context.Context, issue *jira.Issue) (*v2.T
 	if issue.Fields == nil {
 		return nil, errors.New("issue has no fields")
 	}
-	schema, _, err := d.GetTicketSchema(ctx)
+	schema, _, err := d.GetTicketSchema(ctx, issue.Fields.Project.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -200,8 +248,8 @@ func (d *Connector) GetTicket(ctx context.Context, ticketId string) (*v2.Ticket,
 	return ret, nil, nil
 }
 
-func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket) (*v2.Ticket, annotations.Annotations, error) {
-	schema, _, err := d.GetTicketSchema(ctx)
+func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schemaID string) (*v2.Ticket, annotations.Annotations, error) {
+	schema, _, err := d.GetTicketSchema(ctx, schemaID)
 	if err != nil {
 		return nil, nil, err
 	}

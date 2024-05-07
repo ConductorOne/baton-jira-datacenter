@@ -12,8 +12,9 @@ import (
 )
 
 type Connector struct {
-	jiraClient   *client.Client
-	ticketSchema *v2.TicketSchema
+	jiraClient     *client.Client
+	ticketSchemas  map[string]*v2.TicketSchema
+	ticketStatuses []*v2.TicketStatus
 }
 
 // ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.
@@ -51,7 +52,8 @@ func New(ctx context.Context, instanceURL, accessToken string) (*Connector, erro
 	}
 
 	c := &Connector{
-		jiraClient: jiraClient,
+		jiraClient:    jiraClient,
+		ticketSchemas: make(map[string]*v2.TicketSchema),
 	}
 
 	return c, nil
