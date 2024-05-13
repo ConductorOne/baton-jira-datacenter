@@ -52,7 +52,8 @@ func (c *Client) ListStatuses(ctx context.Context) ([]*jira.Status, error) {
 
 	ret := make([]*jira.Status, 0, len(statuses))
 	for _, status := range statuses {
-		ret = append(ret, &status)
+		st := &status
+		ret = append(ret, st)
 	}
 
 	return ret, nil
