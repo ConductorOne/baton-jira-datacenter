@@ -3,7 +3,6 @@ package connector
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
@@ -122,8 +121,6 @@ func (d *Connector) GetTicketSchema(ctx context.Context, schemaID string) (*v2.T
 	if schema, ok := d.ticketSchemas[schemaID]; ok {
 		return schema, nil, nil
 	}
-
-	fmt.Println("schemaID", schemaID)
 
 	project, err := d.jiraClient.GetProject(ctx, schemaID)
 	if err != nil {
