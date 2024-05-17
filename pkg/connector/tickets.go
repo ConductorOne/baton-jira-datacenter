@@ -144,29 +144,6 @@ func (d *Connector) issueToTicket(ctx context.Context, issue *jira.Issue) (*v2.T
 		return nil, err
 	}
 
-	var comments []*v2.TicketComment
-	if issue.Fields.Comments != nil {
-		for _, comment := range issue.Fields.Comments.Comments {
-			c := &v2.TicketComment{
-				Id:              comment.ID,
-				OriginalContent: comment.Body,
-				UpdatedContent:  comment.Updated,
-				// TODO figure out how timestamps are returned and pares them
-				//CreatedAt: timestamppb.New(time.Time(comment.Created)),
-				//UpdatedAt: timestamppb.New(time.Time(comment.Updated)),
-			}
-
-			if createdBy, err := userResource(comment.Author); err == nil && createdBy != nil {
-				c.CreatedBy = createdBy
-			}
-			if updatedBy, err := userResource(comment.UpdateAuthor); err == nil && updatedBy != nil {
-				c.LastUpdatedBy = updatedBy
-			}
-
-			comments = append(comments, c)
-		}
-	}
-
 	ret := &v2.Ticket{
 		Id:          issue.ID,
 		DisplayName: issue.Fields.Summary,
@@ -180,7 +157,6 @@ func (d *Connector) issueToTicket(ctx context.Context, issue *jira.Issue) (*v2.T
 			DisplayName: issue.Fields.Status.Name,
 		},
 		Labels:    issue.Fields.Labels,
-		Comments:  comments,
 		CreatedAt: timestamppb.New(time.Time(issue.Fields.Created)),
 		UpdatedAt: timestamppb.New(time.Time(issue.Fields.Updated)),
 	}
