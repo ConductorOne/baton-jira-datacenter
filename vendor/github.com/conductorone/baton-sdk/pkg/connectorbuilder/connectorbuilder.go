@@ -62,7 +62,7 @@ type EventProvider interface {
 
 type TicketManager interface {
 	GetTicket(ctx context.Context, ticketId string) (*v2.Ticket, annotations.Annotations, error)
-	CreateTicket(ctx context.Context, ticket *v2.Ticket, schemaID string) (*v2.Ticket, annotations.Annotations, error)
+	CreateTicket(ctx context.Context, ticket *v2.Ticket, schema *v2.TicketSchema) (*v2.Ticket, annotations.Annotations, error)
 	GetTicketSchema(ctx context.Context, schemaID string) (*v2.TicketSchema, annotations.Annotations, error)
 	ListTicketSchemas(ctx context.Context, pToken *pagination.Token) ([]*v2.TicketSchema, string, annotations.Annotations, error)
 }
@@ -114,6 +114,9 @@ func (b *builderImpl) CreateTicket(ctx context.Context, request *v2.TicketsServi
 	}
 
 	reqBody := request.GetRequest()
+	if reqBody == nil {
+		return nil, fmt.Errorf("error: request body is nil")
+	}
 	cTicket := &v2.Ticket{
 		DisplayName:  reqBody.GetDisplayName(),
 		Description:  reqBody.GetDescription(),
@@ -123,7 +126,7 @@ func (b *builderImpl) CreateTicket(ctx context.Context, request *v2.TicketsServi
 		CustomFields: reqBody.GetCustomFields(),
 	}
 
-	ticket, annos, err := b.ticketManager.CreateTicket(ctx, cTicket, reqBody.GetSchemaId())
+	ticket, annos, err := b.ticketManager.CreateTicket(ctx, cTicket, request.GetSchema())
 	if err != nil {
 		return nil, fmt.Errorf("error: creating ticket failed: %w", err)
 	}
@@ -360,22 +363,45 @@ func (b *builderImpl) GetMetadata(ctx context.Context, request *v2.ConnectorServ
 
 // getCapabilities gets all capabilities for a connector.
 func getCapabilities(ctx context.Context, b *builderImpl) *v2.ConnectorCapabilities {
+	connectorCaps := make(map[v2.Capability]struct{})
 	resourceTypeCapabilities := []*v2.ResourceTypeCapability{}
 	for _, rb := range b.resourceBuilders {
 		resourceTypeCapability := &v2.ResourceTypeCapability{
 			ResourceType: rb.ResourceType(ctx),
 			// Currently by default all resource types support sync.
-			Capabilities: []v2.ResourceTypeCapability_Capability{v2.ResourceTypeCapability_CAPABILITY_SYNC},
+			Capabilities: []v2.Capability{v2.Capability_CAPABILITY_SYNC},
 		}
+		connectorCaps[v2.Capability_CAPABILITY_SYNC] = struct{}{}
 		if _, ok := rb.(ResourceProvisioner); ok {
-			resourceTypeCapability.Capabilities = append(resourceTypeCapability.Capabilities, v2.ResourceTypeCapability_CAPABILITY_PROVISION)
+			resourceTypeCapability.Capabilities = append(resourceTypeCapability.Capabilities, v2.Capability_CAPABILITY_PROVISION)
+			connectorCaps[v2.Capability_CAPABILITY_PROVISION] = struct{}{}
+		} else if _, ok = rb.(ResourceProvisionerV2); ok {
+			resourceTypeCapability.Capabilities = append(resourceTypeCapability.Capabilities, v2.Capability_CAPABILITY_PROVISION)
+			connectorCaps[v2.Capability_CAPABILITY_PROVISION] = struct{}{}
 		}
 		resourceTypeCapabilities = append(resourceTypeCapabilities, resourceTypeCapability)
 	}
 	sort.Slice(resourceTypeCapabilities, func(i, j int) bool {
 		return resourceTypeCapabilities[i].ResourceType.GetId() < resourceTypeCapabilities[j].ResourceType.GetId()
 	})
-	return &v2.ConnectorCapabilities{ResourceTypeCapabilities: resourceTypeCapabilities}
+
+	if b.eventFeed != nil {
+		connectorCaps[v2.Capability_CAPABILITY_EVENT_FEED] = struct{}{}
+	}
+
+	if b.ticketManager != nil {
+		connectorCaps[v2.Capability_CAPABILITY_TICKETING] = struct{}{}
+	}
+
+	var caps []v2.Capability
+	for c := range connectorCaps {
+		caps = append(caps, c)
+	}
+
+	return &v2.ConnectorCapabilities{
+		ResourceTypeCapabilities: resourceTypeCapabilities,
+		ConnectorCapabilities:    caps,
+	}
 }
 
 // Validate validates the connector.
