@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
@@ -10,6 +11,10 @@ import (
 
 func (c *Client) GetProject(ctx context.Context, projectID string) (*jira.Project, error) {
 	l := ctxzap.Extract(ctx)
+
+	if projectID == "" {
+		return nil, errors.New("projectID is required")
+	}
 
 	project, _, err := c.client.Project.Get(ctx, projectID)
 	if err != nil {

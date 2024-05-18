@@ -221,12 +221,7 @@ func (d *Connector) GetTicket(ctx context.Context, ticketId string) (*v2.Ticket,
 	return ret, nil, nil
 }
 
-func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schemaID string) (*v2.Ticket, annotations.Annotations, error) {
-	schema, _, err := d.GetTicketSchema(ctx, schemaID)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema *v2.TicketSchema) (*v2.Ticket, annotations.Annotations, error) {
 	ticketOptions := []client.FieldOption{
 		client.WithType(ticket.GetType().GetId()),
 		client.WithDescription(ticket.GetDescription()),
@@ -240,31 +235,23 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schemaI
 	for id, cf := range schema.GetCustomFields() {
 		switch id {
 		case "project":
-			val, err := sdkTicket.GetCustomFieldValue(ticketFields[id])
+			project, err := sdkTicket.GetPickObjectValue(ticketFields[id])
 			if err != nil {
 				return nil, nil, err
 			}
 
-			if val == nil {
-				return nil, nil, errors.New("error: unable to create ticket, project is required")
-			}
-
-			project, ok := val.(*v2.TicketCustomFieldObjectValue)
-			if !ok || project.GetId() == "" {
+			if project.GetId() == "" {
 				return nil, nil, errors.New("error: unable to create ticket, project is required")
 			}
 
 			projectID = project.GetId()
 
 		case "components":
-			val, err := sdkTicket.GetCustomFieldValue(ticketFields[id])
+			comps, err := sdkTicket.GetPickMultipleObjectValues(ticketFields[id])
 			if err != nil {
 				return nil, nil, err
 			}
-			comps, ok := val.([]*v2.TicketCustomFieldObjectValue)
-			if !ok {
-				return nil, nil, errors.New("error: unable to create ticket, components are required")
-			}
+
 			componentIDs := make([]string, 0, len(comps))
 			for _, component := range comps {
 				componentIDs = append(componentIDs, component.GetId())

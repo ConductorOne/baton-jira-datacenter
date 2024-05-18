@@ -17,7 +17,7 @@ import (
 	sdkTicket "github.com/conductorone/baton-sdk/pkg/types/ticket"
 )
 
-type localTicket struct {
+type localCreateTicket struct {
 	o sync.Once
 
 	templatePath string
@@ -33,7 +33,7 @@ type ticketTemplate struct {
 	CustomFields map[string]interface{} `json:"custom_fields"`
 }
 
-func (m *localTicket) loadTicketTemplate(ctx context.Context) (*ticketTemplate, error) {
+func (m *localCreateTicket) loadTicketTemplate(ctx context.Context) (*ticketTemplate, error) {
 	tbytes, err := os.ReadFile(m.templatePath)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func (m *localTicket) loadTicketTemplate(ctx context.Context) (*ticketTemplate, 
 	return template, nil
 }
 
-func (m *localTicket) Next(ctx context.Context) (*v1.Task, time.Duration, error) {
+func (m *localCreateTicket) Next(ctx context.Context) (*v1.Task, time.Duration, error) {
 	var task *v1.Task
 	m.o.Do(func() {
 		task = &v1.Task{
@@ -60,7 +60,7 @@ func (m *localTicket) Next(ctx context.Context) (*v1.Task, time.Duration, error)
 	return task, 0, nil
 }
 
-func (m *localTicket) Process(ctx context.Context, task *v1.Task, cc types.ConnectorClient) error {
+func (m *localCreateTicket) Process(ctx context.Context, task *v1.Task, cc types.ConnectorClient) error {
 	l := ctxzap.Extract(ctx)
 
 	template, err := m.loadTicketTemplate(ctx)
@@ -84,8 +84,7 @@ func (m *localTicket) Process(ctx context.Context, task *v1.Task, cc types.Conne
 		Type: &v2.TicketType{
 			Id: template.TypeId,
 		},
-		Labels:   template.Labels,
-		SchemaId: schema.Schema.GetId(),
+		Labels: template.Labels,
 	}
 
 	cfs := make(map[string]*v2.TicketCustomField)
@@ -99,6 +98,7 @@ func (m *localTicket) Process(ctx context.Context, task *v1.Task, cc types.Conne
 	ticketRequestBody.CustomFields = cfs
 	ticketReq := &v2.TicketsServiceCreateTicketRequest{
 		Request: ticketRequestBody,
+		Schema:  schema.GetSchema(),
 	}
 
 	resp, err := cc.CreateTicket(ctx, ticketReq)
@@ -113,7 +113,81 @@ func (m *localTicket) Process(ctx context.Context, task *v1.Task, cc types.Conne
 
 // NewTicket returns a task manager that queues a create ticket task.
 func NewTicket(ctx context.Context, templatePath string) tasks.Manager {
-	return &localTicket{
+	return &localCreateTicket{
 		templatePath: templatePath,
 	}
+}
+
+// Get ticket task.
+type localGetTicket struct {
+	o        sync.Once
+	ticketId string
+}
+
+func (m *localGetTicket) Next(ctx context.Context) (*v1.Task, time.Duration, error) {
+	var task *v1.Task
+	m.o.Do(func() {
+		task = &v1.Task{
+			TaskType: &v1.Task_GetTicket{
+				GetTicket: &v1.Task_GetTicketTask{
+					TicketId: m.ticketId,
+				},
+			},
+		}
+	})
+	return task, 0, nil
+}
+
+func (m *localGetTicket) Process(ctx context.Context, task *v1.Task, cc types.ConnectorClient) error {
+	l := ctxzap.Extract(ctx)
+
+	resp, err := cc.GetTicket(ctx, &v2.TicketsServiceGetTicketRequest{
+		Id: m.ticketId,
+	})
+	if err != nil {
+		return err
+	}
+
+	l.Info("ticket", zap.Any("resp", resp))
+
+	return nil
+}
+
+// NewGetTicket returns a task manager that queues a get ticket task.
+func NewGetTicket(ctx context.Context, ticketId string) tasks.Manager {
+	return &localGetTicket{
+		ticketId: ticketId,
+	}
+}
+
+type localListTicketSchemas struct {
+	o sync.Once
+}
+
+func (m *localListTicketSchemas) Next(ctx context.Context) (*v1.Task, time.Duration, error) {
+	var task *v1.Task
+	m.o.Do(func() {
+		task = &v1.Task{
+			TaskType: &v1.Task_ListTicketSchemas{},
+		}
+	})
+	return task, 0, nil
+}
+
+func (m *localListTicketSchemas) Process(ctx context.Context, task *v1.Task, cc types.ConnectorClient) error {
+	l := ctxzap.Extract(ctx)
+
+	resp, err := cc.ListTicketSchemas(ctx, &v2.TicketsServiceListTicketSchemasRequest{})
+	if err != nil {
+		return err
+	}
+
+	l.Info("Ticket Schemas", zap.Any("resp", resp))
+
+	return nil
+}
+
+// NewSchema returns a task manager that queues a list schema task.
+func NewListTicketSchema(ctx context.Context) tasks.Manager {
+	return &localListTicketSchemas{}
 }
