@@ -249,6 +249,9 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 		case "components":
 			comps, err := sdkTicket.GetPickMultipleObjectValues(ticketFields[id])
 			if err != nil {
+				if errors.Is(err, sdkTicket.ErrFieldNil) {
+					continue
+				}
 				return nil, nil, err
 			}
 
