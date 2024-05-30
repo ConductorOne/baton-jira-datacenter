@@ -3,6 +3,8 @@ package connector
 import (
 	"context"
 	"errors"
+	"net/url"
+	"path"
 	"time"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
@@ -144,6 +146,11 @@ func (d *Connector) issueToTicket(ctx context.Context, issue *jira.Issue) (*v2.T
 		return nil, err
 	}
 
+	issueURL, err := d.generateIssueURL(issue.Key)
+	if err != nil {
+		return nil, err
+	}
+
 	ret := &v2.Ticket{
 		Id:          issue.ID,
 		DisplayName: issue.Fields.Summary,
@@ -159,7 +166,9 @@ func (d *Connector) issueToTicket(ctx context.Context, issue *jira.Issue) (*v2.T
 		Labels:    issue.Fields.Labels,
 		CreatedAt: timestamppb.New(time.Time(issue.Fields.Created)),
 		UpdatedAt: timestamppb.New(time.Time(issue.Fields.Updated)),
+		Url:       issueURL,
 	}
+
 	if issue.Fields.Assignee != nil {
 		if assignee, err := userResource(*issue.Fields.Assignee); err == nil && assignee != nil {
 			ret.Assignees = []*v2.Resource{assignee}
@@ -221,8 +230,11 @@ func (d *Connector) GetTicket(ctx context.Context, ticketId string) (*v2.Ticket,
 	return ret, nil, nil
 }
 
+// This is returning nil for annotations
 func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema *v2.TicketSchema) (*v2.Ticket, annotations.Annotations, error) {
+
 	ticketOptions := []client.FieldOption{
+		client.WithStatus(ticket.GetStatus().GetId()),
 		client.WithType(ticket.GetType().GetId()),
 		client.WithDescription(ticket.GetDescription()),
 		client.WithLabels(ticket.GetLabels()...),
@@ -300,4 +312,13 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 	}
 
 	return ret, nil, nil
+}
+
+func (d *Connector) generateIssueURL(issueKey string) (string, error) {
+	baseURL, err := url.Parse(d.jiraClient.BaseURL)
+	if err != nil {
+		return "", err
+	}
+	baseURL.Path = path.Join("browse", issueKey)
+	return baseURL.String(), nil
 }

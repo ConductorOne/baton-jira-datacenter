@@ -22,6 +22,16 @@ func (c *Client) GetIssue(ctx context.Context, issueID string) (*jira.Issue, err
 
 type FieldOption func(issue *jira.Issue)
 
+func WithStatus(statusId string) FieldOption {
+	return func(issue *jira.Issue) {
+		if statusId != "" {
+			issue.Fields.Status = &jira.Status{
+				ID: statusId,
+			}
+		}
+	}
+}
+
 func WithDescription(description string) FieldOption {
 	return func(issue *jira.Issue) {
 		issue.Fields.Description = description

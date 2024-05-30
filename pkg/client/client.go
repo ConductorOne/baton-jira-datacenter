@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"net/url"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
@@ -10,7 +11,8 @@ import (
 )
 
 type Client struct {
-	client *jira.Client
+	BaseURL string
+	client  *jira.Client
 }
 
 func New(ctx context.Context, instanceURL, accessToken string) (*Client, error) {
@@ -28,7 +30,13 @@ func New(ctx context.Context, instanceURL, accessToken string) (*Client, error) 
 		return nil, err
 	}
 
+	baseURL, err := url.Parse(instanceURL)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Client{
-		client: jiraClient,
+		BaseURL: baseURL.String(),
+		client:  jiraClient,
 	}, nil
 }
