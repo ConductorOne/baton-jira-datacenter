@@ -230,9 +230,8 @@ func (d *Connector) GetTicket(ctx context.Context, ticketId string) (*v2.Ticket,
 	return ret, nil, nil
 }
 
-// This is returning nil for annotations
+// This is returning nil for annotations.
 func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema *v2.TicketSchema) (*v2.Ticket, annotations.Annotations, error) {
-
 	ticketOptions := []client.FieldOption{
 		client.WithStatus(ticket.GetStatus().GetId()),
 		client.WithType(ticket.GetType().GetId()),
