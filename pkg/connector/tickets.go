@@ -25,6 +25,10 @@ func (d *Connector) ListTicketSchemas(ctx context.Context, pToken *pagination.To
 		return nil, "", nil, err
 	}
 
+	if len(projects) == 0 {
+		return nil, "", nil, errors.New("no projects found")
+	}
+
 	for _, project := range projects {
 		schema, err := d.schemaForProject(ctx, project)
 		if err != nil {
@@ -94,12 +98,14 @@ func (d *Connector) schemaForProject(ctx context.Context, project *jira.Project)
 		},
 	)
 
-	customFields["components"] = sdkTicket.PickMultipleObjectValuesFieldSchema(
-		"components",
-		"Components",
-		false,
-		components,
-	)
+	if len(components) > 0 {
+		customFields["components"] = sdkTicket.PickMultipleObjectValuesFieldSchema(
+			"components",
+			"Components",
+			false,
+			components,
+		)
+	}
 
 	ret := &v2.TicketSchema{
 		Id:           project.Key,
