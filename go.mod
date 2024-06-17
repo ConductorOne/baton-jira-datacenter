@@ -4,7 +4,7 @@ go 1.22.2
 
 require (
 	github.com/andygrunwald/go-jira/v2 v2.0.0-20240419124508-6752705de4c7
-	github.com/conductorone/baton-sdk v0.1.39-0.20240530205352-74438ef2cb4b
+	github.com/conductorone/baton-sdk v0.1.46
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/spf13/cobra v1.8.0
 	go.uber.org/zap v1.27.0
@@ -74,6 +74,8 @@ require (
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/trivago/tgo v1.0.7 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
+	go.opentelemetry.io/otel v1.27.0 // indirect
+	go.opentelemetry.io/otel/metric v1.27.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/ratelimit v0.3.1 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
