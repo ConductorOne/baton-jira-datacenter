@@ -18,9 +18,9 @@ type projectBuilder struct {
 
 func projectResource(ctx context.Context, project jira.Project, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	profile := map[string]interface{}{
-		"group_id":   project.ID,
-		"group_name": project.Name,
-		"group_key":  project.Key,
+		"project_id":   project.ID,
+		"project_name": project.Name,
+		"project_key":  project.Key,
 	}
 
 	groupTraitOptions := []sdkResource.GroupTraitOption{
@@ -28,9 +28,9 @@ func projectResource(ctx context.Context, project jira.Project, parentResourceID
 	}
 
 	ret, err := sdkResource.NewGroupResource(
-		project.ID,
-		projectResourceType,
 		project.Name,
+		projectResourceType,
+		project.ID,
 		groupTraitOptions,
 		sdkResource.WithParentResourceID(parentResourceID),
 	)
@@ -46,7 +46,6 @@ func (p *projectBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 }
 
 // List returns all the users from the database as resource objects.
-// Users include a UserTrait because they are the 'shape' of a standard user.
 func (p *projectBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	var ret []*v2.Resource
 	projects, err := p.client.ListProjects(ctx)
