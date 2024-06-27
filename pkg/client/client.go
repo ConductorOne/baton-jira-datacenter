@@ -33,9 +33,12 @@ func (b *JiraError) Error() string {
 }
 
 // GET - http://{baseurl}/rest/api/2/permissions
+// GET - http://{baseurl}/rest/api/2/user/search?username=.
+// GET - http://{baseurl}/rest/api/2/groups/picker?maxResults=1000
 const (
 	allPermissions = "rest/api/2/permissions"
 	allUsers       = "rest/api/2/user/search?username=."
+	allGroups      = "rest/api/2/groups/picker?maxResults=500"
 )
 
 func NewClient() *Client {
@@ -145,4 +148,21 @@ func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
 	defer resp.Body.Close()
 
 	return usersData, err
+}
+
+func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
+	var groupsData GroupsAPIData
+	req, endpointUrl, err := getRequest(ctx, client, allGroups)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&groupsData))
+	if err != nil {
+		return nil, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+
+	return groupsData.Groups, err
 }

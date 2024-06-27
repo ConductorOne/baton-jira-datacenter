@@ -23,6 +23,7 @@ func (d *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.Reso
 		newUserBuilder(d.jiraClient),
 		newProjectBuilder(d.jiraClient),
 		newRoleBuilder(d.jiraClient),
+		newGroupBuilder(d.jiraClient),
 	}
 }
 

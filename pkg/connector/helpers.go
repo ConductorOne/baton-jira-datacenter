@@ -27,9 +27,8 @@ func PopulateOptions(displayName, permission, resource string) []ent.Entitlement
 
 // splitFullName returns firstName and lastName.
 func splitFullName(name string) (string, string) {
-	names := strings.SplitN(name, " ", 2)
 	var firstName, lastName string
-
+	names := strings.SplitN(name, " ", 2)
 	switch len(names) {
 	case 1:
 		firstName = names[0]
