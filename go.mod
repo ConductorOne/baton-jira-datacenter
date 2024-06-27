@@ -4,6 +4,7 @@ go 1.22.2
 
 require (
 	github.com/andygrunwald/go-jira/v2 v2.0.0-20240419124508-6752705de4c7
+	github.com/conductorone/baton-bitbucket-datacenter v0.0.3
 	github.com/conductorone/baton-sdk v0.1.39-0.20240530205352-74438ef2cb4b
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/spf13/cobra v1.8.0
@@ -88,7 +89,7 @@ require (
 	golang.org/x/oauth2 v0.20.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/text v0.15.0 // indirect
+	golang.org/x/text v0.15.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240515191416-fc5f0ca64291 // indirect
 	google.golang.org/grpc v1.64.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

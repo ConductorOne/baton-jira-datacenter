@@ -14,13 +14,24 @@ var (
 	accessToken, _ = os.LookupEnv("BATON_ACCESS_TOKEN")
 )
 
-func TestClient_getPermissions(t *testing.T) {
+func TestClient_ListAllPermissions(t *testing.T) {
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}
 
 	client, _ := New(ctx, instanceUrl, accessToken)
 	roles, err := client.ListAllPermissions(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+}
+
+func TestClient_ListAllUsers(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	roles, err := client.ListAllUsers(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
 }

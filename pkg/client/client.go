@@ -35,6 +35,7 @@ func (b *JiraError) Error() string {
 // GET - http://{baseurl}/rest/api/2/permissions
 const (
 	allPermissions = "rest/api/2/permissions"
+	allUsers       = "rest/api/2/user/search?username=."
 )
 
 func NewClient() *Client {
@@ -70,8 +71,8 @@ func New(ctx context.Context, instanceURL, accessToken string) (*Client, error) 
 	}, nil
 }
 
-func getRequest(ctx context.Context, cli *Client, baseUrl, apiUrl string) (*http.Request, string, error) {
-	endpointUrl := fmt.Sprintf("%s/%s", baseUrl, apiUrl)
+func getRequest(ctx context.Context, cli *Client, apiUrl string) (*http.Request, string, error) {
+	endpointUrl := fmt.Sprintf("%s/%s", cli.BaseURL, apiUrl)
 	uri, err := url.Parse(endpointUrl)
 	if err != nil {
 		return nil, "", err
@@ -105,7 +106,7 @@ func getCustomError(err error, resp *http.Response, endpointUrl string) *JiraErr
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2-getAllPermissions
 func (client *Client) ListAllPermissions(ctx context.Context) ([]Permission, error) {
 	var permissionsData PermissionsAPIData
-	req, endpointUrl, err := getRequest(ctx, client, client.BaseURL, allPermissions)
+	req, endpointUrl, err := getRequest(ctx, client, allPermissions)
 	if err != nil {
 		return nil, err
 	}
@@ -127,4 +128,21 @@ func (client *Client) ListAllPermissions(ctx context.Context) ([]Permission, err
 	}
 
 	return permissionsData.Roles, nil
+}
+
+func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
+	var usersData []jira.User
+	req, endpointUrl, err := getRequest(ctx, client, allUsers)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&usersData))
+	if err != nil {
+		return nil, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+
+	return usersData, err
 }
