@@ -38,7 +38,7 @@ func (b *JiraError) Error() string {
 const (
 	allPermissions = "rest/api/2/permissions"
 	allUsers       = "rest/api/2/user/search?username=."
-	allGroups      = "rest/api/2/groups/picker?maxResults=500"
+	allGroups      = "rest/api/2/groups/picker?maxResults=1000"
 )
 
 func NewClient() *Client {
