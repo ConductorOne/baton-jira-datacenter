@@ -35,14 +35,20 @@ func (b *JiraError) Error() string {
 // GET - http://{baseurl}/rest/api/2/permissions
 // GET - http://{baseurl}/rest/api/2/user/search?username=.
 // GET - http://{baseurl}/rest/api/2/groups/picker?maxResults=1000
+// GET - http://{baseurl}/rest/api/2/group/member?groupname={groupname}
+// GET - http://{baseurl}/rest/api/latest/user/search?username=.&maxResults=1000
 const (
 	allPermissions = "rest/api/2/permissions"
-	allUsers       = "rest/api/2/user/search?username=."
+	allUsersV2     = "rest/api/2/user/search?username=.&maxResults=1000"
+	allUsers       = "rest/api/latest/user/search?username=.&maxResults=1000"
 	allGroups      = "rest/api/2/groups/picker?maxResults=1000"
+	groupMemebers  = "rest/api/2/group/member?groupname="
 )
 
 func NewClient() *Client {
 	return &Client{
+		BaseURL:    "http://localhost:8088",
+		client:     &jira.Client{},
 		httpClient: &uhttp.BaseHttpClient{},
 	}
 }
@@ -104,7 +110,7 @@ func getCustomError(err error, resp *http.Response, endpointUrl string) *JiraErr
 	}
 }
 
-// getPermissions
+// ListAllPermissions
 // Returns all permissions that are present in the Jira instance - Global, Project and the global ones added by plugins
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2-getAllPermissions
 func (client *Client) ListAllPermissions(ctx context.Context) ([]Permission, error) {
@@ -165,4 +171,20 @@ func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 	defer resp.Body.Close()
 
 	return groupsData.Groups, err
+}
+
+func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]GroupUser, error) {
+	var groupMembersAPIData GroupMembersAPIData
+	req, endpointUrl, err := getRequest(ctx, client, groupMemebers+groupName)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&groupMembersAPIData))
+	if err != nil {
+		return nil, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return groupMembersAPIData.Users, err
 }

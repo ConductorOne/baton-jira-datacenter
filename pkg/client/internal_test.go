@@ -46,3 +46,14 @@ func TestClient_ListAllGroups(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
 }
+
+func TestClient_GetGroupMembers(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	roles, err := client.GetGroupMembers(ctx, "jira-software-users")
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+}

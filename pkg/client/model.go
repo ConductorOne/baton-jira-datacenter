@@ -29,3 +29,30 @@ type Labels struct {
 	Title string `json:"title"`
 	Type  string `json:"type"`
 }
+
+type GroupMembersAPIData struct {
+	Self       string      `json:"self"`
+	MaxResults int         `json:"maxResults"`
+	StartAt    int         `json:"startAt"`
+	Total      int         `json:"total"`
+	IsLast     bool        `json:"isLast"`
+	Users      []GroupUser `json:"values"`
+}
+
+type AvatarUrls struct {
+	Four8X48  string `json:"48x48"`
+	Two4X24   string `json:"24x24"`
+	One6X16   string `json:"16x16"`
+	Three2X32 string `json:"32x32"`
+}
+
+type GroupUser struct {
+	Self         string     `json:"self"`
+	Name         string     `json:"name"`
+	Key          string     `json:"key"`
+	EmailAddress string     `json:"emailAddress"`
+	AvatarUrls   AvatarUrls `json:"avatarUrls"`
+	DisplayName  string     `json:"displayName"`
+	Active       bool       `json:"active"`
+	TimeZone     string     `json:"timeZone"`
+}
