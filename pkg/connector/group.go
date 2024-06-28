@@ -20,7 +20,7 @@ func (g *groupBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 }
 
 func groupResource(ctx context.Context, group client.Group, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
-	// jira groups does not have ids only names
+	// jira groups does not include ids only names
 	profile := map[string]interface{}{
 		"group_name": group.Name,
 		"group_id":   group.Name,
@@ -61,12 +61,10 @@ func (g *groupBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 	return ret, "", nil, nil
 }
 
-// Entitlements always returns an empty slice for users.
 func (g *groupBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
 }
 
-// Grants always returns an empty slice for users since they don't have any entitlements.
 func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
 }

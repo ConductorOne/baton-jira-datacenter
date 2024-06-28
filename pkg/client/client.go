@@ -140,6 +140,8 @@ func (client *Client) ListAllPermissions(ctx context.Context) ([]Permission, err
 	return permissionsData.Roles, nil
 }
 
+// ListAllUsers
+// Returns all users that are present in the Jira instance - Global, Project and the global ones added by plugins
 func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
 	var usersData []jira.User
 	req, endpointUrl, err := getRequest(ctx, client, allUsers)
@@ -157,6 +159,8 @@ func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
 	return usersData, err
 }
 
+// ListAllGroups
+// Returns all groups that are present in the Jira instance - Global, Project and the global ones added by plugins
 func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 	var groupsData GroupsAPIData
 	req, endpointUrl, err := getRequest(ctx, client, allGroups)
@@ -174,6 +178,8 @@ func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 	return groupsData.Groups, err
 }
 
+// GetGroupMembers
+// Returns all group members that are present in specific groups
 func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]GroupUser, error) {
 	var groupMembersAPIData GroupMembersAPIData
 	req, endpointUrl, err := getRequest(ctx, client, groupMemebers+groupName)
@@ -190,6 +196,8 @@ func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]
 	return groupMembersAPIData.Users, err
 }
 
+// ListAllRoles
+// Returns all roles that are present in the Jira instance - Global, Project and the global ones added by plugins
 func (client *Client) ListAllRoles(ctx context.Context) ([]RolesAPIData, error) {
 	var rolesData []RolesAPIData
 	req, endpointUrl, err := getRequest(ctx, client, allRoles)

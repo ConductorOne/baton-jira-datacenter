@@ -45,7 +45,7 @@ func (p *projectBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 	return projectResourceType
 }
 
-// List returns all the users from the database as resource objects.
+// List returns all the projects from the database as resource objects.
 func (p *projectBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	var ret []*v2.Resource
 	projects, err := p.client.ListProjects(ctx)
@@ -65,12 +65,10 @@ func (p *projectBuilder) List(ctx context.Context, parentResourceID *v2.Resource
 	return ret, "", nil, nil
 }
 
-// Entitlements always returns an empty slice for users.
 func (o *projectBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
 }
 
-// Grants always returns an empty slice for users since they don't have any entitlements.
 func (p *projectBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
 }

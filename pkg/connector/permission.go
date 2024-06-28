@@ -46,8 +46,8 @@ func (r *permissionBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 	return permissionResourceType
 }
 
-// List returns all the users from the database as resource objects.
-// Users include a UserTrait because they are the 'shape' of a standard user.
+// List returns all the permissions from the database as resource objects.
+// Permissions include a GroupTrait because they are the 'shape' of a standard permission.
 func (r *permissionBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	var ret []*v2.Resource
 	permissions, err := r.client.ListAllPermissions(ctx)
@@ -67,12 +67,10 @@ func (r *permissionBuilder) List(ctx context.Context, parentResourceID *v2.Resou
 	return ret, "", nil, nil
 }
 
-// Entitlements always returns an empty slice for users.
 func (r *permissionBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
 }
 
-// Grants always returns an empty slice for users since they don't have any entitlements.
 func (r *permissionBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
 }

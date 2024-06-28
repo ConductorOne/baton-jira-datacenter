@@ -45,8 +45,8 @@ func (r *roleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 	return roleResourceType
 }
 
-// List returns all the users from the database as resource objects.
-// Users include a UserTrait because they are the 'shape' of a standard user.
+// List returns all the roles from the database as resource objects.
+// Roles include a GroupTrait because they are the 'shape' of a standard role.
 func (r *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	var ret []*v2.Resource
 	roles, err := r.client.ListAllRoles(ctx)
@@ -66,12 +66,10 @@ func (r *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	return ret, "", nil, nil
 }
 
-// Entitlements always returns an empty slice for users.
 func (r *roleBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
 }
 
-// Grants always returns an empty slice for users since they don't have any entitlements.
 func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
 }
