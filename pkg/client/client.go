@@ -43,6 +43,7 @@ const (
 	allUsers       = "rest/api/latest/user/search?username=.&maxResults=1000"
 	allGroups      = "rest/api/2/groups/picker?maxResults=1000"
 	groupMemebers  = "rest/api/2/group/member?groupname="
+	allRoles       = "rest/api/2/role"
 )
 
 func NewClient() *Client {
@@ -187,4 +188,20 @@ func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]
 
 	defer resp.Body.Close()
 	return groupMembersAPIData.Users, err
+}
+
+func (client *Client) ListAllRoles(ctx context.Context) ([]RolesAPIData, error) {
+	var rolesData []RolesAPIData
+	req, endpointUrl, err := getRequest(ctx, client, allRoles)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&rolesData))
+	if err != nil {
+		return nil, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return rolesData, err
 }

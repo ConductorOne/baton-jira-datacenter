@@ -6,10 +6,10 @@ type PermissionsAPIData struct {
 }
 
 type Permission struct {
-	Key         string `json:"key"`
-	Name        string `json:"name"`
-	Type        string `json:"type"`
-	Description string `json:"description"`
+	Key         string `json:"key,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Type        string `json:"type,omitempty"`
+	Description string `json:"description,omitempty"`
 }
 
 type GroupsAPIData struct {
@@ -55,4 +55,19 @@ type GroupUser struct {
 	DisplayName  string     `json:"displayName"`
 	Active       bool       `json:"active"`
 	TimeZone     string     `json:"timeZone"`
+}
+
+type RolesAPIData struct {
+	Self        string      `json:"self"`
+	Name        string      `json:"name"`
+	ID          int         `json:"id"`
+	Description string      `json:"description"`
+	Users       []RoleUsers `json:"actors"`
+}
+
+type RoleUsers struct {
+	ID          int    `json:"id"`
+	DisplayName string `json:"displayName"`
+	Type        string `json:"type"`
+	Name        string `json:"name"`
 }
