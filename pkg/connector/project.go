@@ -20,27 +20,6 @@ type projectBuilder struct {
 }
 
 const (
-	administerProjects              = "ADMINISTER_PROJECTS"
-	browseArchive                   = "BROWSE_ARCHIVE"
-	browseProjects                  = "BROWSE_PROJECTS"
-	editSprintNameandGoalPermission = "EDIT_SPRINT_NAME_AND_GOAL_PERMISSION"
-	manageSprintsPermission         = "MANAGE_SPRINTS_PERMISSION"
-	startStopSprintsPermission      = "START_STOP_SPRINTS_PERMISSION"
-	viewDevTools                    = "VIEW_DEV_TOOLS"
-	viewReadonlyWorkflow            = "VIEW_READONLY_WORKFLOW"
-)
-
-var projectPermissions = []string{administerProjects,
-	browseArchive,
-	browseProjects,
-	editSprintNameandGoalPermission,
-	manageSprintsPermission,
-	startStopSprintsPermission,
-	viewDevTools,
-	viewReadonlyWorkflow,
-}
-
-const (
 	userRole  = "atlassian-user-role-actor"
 	groupRole = "atlassian-group-role-actor"
 )
