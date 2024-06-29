@@ -14,7 +14,7 @@ var (
 	accessToken, _ = os.LookupEnv("BATON_ACCESS_TOKEN")
 )
 
-func TestClient_ListAllPermissions(t *testing.T) {
+func TestClientListAllPermissions(t *testing.T) {
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}
@@ -25,7 +25,7 @@ func TestClient_ListAllPermissions(t *testing.T) {
 	assert.NotNil(t, roles)
 }
 
-func TestClient_ListAllUsers(t *testing.T) {
+func TestClientListAllUsers(t *testing.T) {
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}
@@ -36,7 +36,7 @@ func TestClient_ListAllUsers(t *testing.T) {
 	assert.NotNil(t, roles)
 }
 
-func TestClient_ListAllGroups(t *testing.T) {
+func TestClientListAllGroups(t *testing.T) {
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}
@@ -47,7 +47,7 @@ func TestClient_ListAllGroups(t *testing.T) {
 	assert.NotNil(t, roles)
 }
 
-func TestClient_GetGroupMembers(t *testing.T) {
+func TestClientGetGroupMembers(t *testing.T) {
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}
@@ -58,13 +58,46 @@ func TestClient_GetGroupMembers(t *testing.T) {
 	assert.NotNil(t, roles)
 }
 
-func TestClient_ListAllRoles(t *testing.T) {
+func TestClientListAllRoles(t *testing.T) {
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}
 
 	client, _ := New(ctx, instanceUrl, accessToken)
 	roles, err := client.ListAllRoles(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+}
+
+func TestClientGetUser(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	roles, err := client.GetUser(ctx, "globaluser")
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+}
+
+func TestClientGetProjectRoles(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	roles, err := client.GetProjectRoles(ctx, "10000")
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+}
+
+func TestClientGetProjectRoleDetails(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	roles, err := client.GetProjectRoleDetails(ctx, "http://localhost:8080/rest/api/2/project/10000/role/10002")
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
 }

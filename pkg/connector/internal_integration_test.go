@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
@@ -19,7 +20,7 @@ var (
 	pToken           = &pagination.Token{}
 )
 
-func Test_GroupBuilder_List(t *testing.T) {
+func TestGroupBuilderList(t *testing.T) {
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}
@@ -33,7 +34,7 @@ func Test_GroupBuilder_List(t *testing.T) {
 	assert.NotNil(t, res)
 }
 
-func Test_ProjectBuilder_List(t *testing.T) {
+func TestProjectBuilderList(t *testing.T) {
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}
@@ -47,7 +48,7 @@ func Test_ProjectBuilder_List(t *testing.T) {
 	assert.NotNil(t, res)
 }
 
-func Test_UserBuilder_List(t *testing.T) {
+func TestUserBuilderList(t *testing.T) {
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}
@@ -61,7 +62,7 @@ func Test_UserBuilder_List(t *testing.T) {
 	assert.NotNil(t, res)
 }
 
-func Test_RoleBuilder_List(t *testing.T) {
+func TestRoleBuilderList(t *testing.T) {
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}
@@ -73,4 +74,23 @@ func Test_RoleBuilder_List(t *testing.T) {
 	res, _, _, err := r.List(ctx, parentResourceID, pToken)
 	assert.Nil(t, err)
 	assert.NotNil(t, res)
+}
+
+func TestProjectBuilderGrants(t *testing.T) {
+	pToken := &pagination.Token{}
+	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	p := &projectBuilder{
+		client: cli,
+	}
+	project := jira.Project{
+		ID:          "10100",
+		Key:         "devpro",
+		Name:        "devpro",
+		Description: "Developers",
+	}
+	resource, err := projectResource(ctx, project, nil)
+	assert.Nil(t, err)
+	gr, _, _, err := p.Grants(ctx, resource, pToken)
+	assert.Nil(t, err)
+	assert.NotNil(t, gr)
 }

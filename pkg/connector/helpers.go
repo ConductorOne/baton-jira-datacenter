@@ -7,6 +7,8 @@ import (
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 func annotationsForUserResourceType() annotations.Annotations {
@@ -38,4 +40,10 @@ func splitFullName(name string) (string, string) {
 	}
 
 	return firstName, lastName
+}
+
+func titleCase(s string) string {
+	titleCaser := cases.Title(language.English)
+
+	return titleCaser.String(s)
 }

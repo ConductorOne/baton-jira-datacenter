@@ -58,16 +58,29 @@ type GroupUser struct {
 }
 
 type RolesAPIData struct {
-	Self        string      `json:"self"`
-	Name        string      `json:"name"`
-	ID          int         `json:"id"`
-	Description string      `json:"description"`
-	Users       []RoleUsers `json:"actors"`
+	Self        string   `json:"self"`
+	Name        string   `json:"name"`
+	ID          int      `json:"id"`
+	Description string   `json:"description"`
+	Actors      []Actors `json:"actors"`
 }
 
-type RoleUsers struct {
+type Actors struct {
 	ID          int    `json:"id"`
 	DisplayName string `json:"displayName"`
 	Type        string `json:"type"`
 	Name        string `json:"name"`
+}
+
+type UsersAPIData struct {
+	Self         string     `json:"self"`
+	Key          string     `json:"key"`
+	Name         string     `json:"name"`
+	EmailAddress string     `json:"emailAddress"`
+	AvatarUrls   AvatarUrls `json:"avatarUrls"`
+	DisplayName  string     `json:"displayName"`
+	Active       bool       `json:"active"`
+	Deleted      bool       `json:"deleted"`
+	TimeZone     string     `json:"timeZone"`
+	Locale       string     `json:"locale"`
 }

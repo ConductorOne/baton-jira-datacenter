@@ -37,13 +37,16 @@ func (b *JiraError) Error() string {
 // GET - http://{baseurl}/rest/api/2/groups/picker?maxResults=1000
 // GET - http://{baseurl}/rest/api/2/group/member?groupname={groupname}
 // GET - http://{baseurl}/rest/api/latest/user/search?username=.&maxResults=1000
+// GET - http://{baseurl}/rest/api/2/role
+// GET - http://{baseurl}/rest/api/2/project
 const (
 	allPermissions = "rest/api/2/permissions"
-	allUsersV2     = "rest/api/2/user/search?username=.&maxResults=1000"
+	allUsersV2     = "rest/api/2/user/search?username="
 	allUsers       = "rest/api/latest/user/search?username=.&maxResults=1000"
 	allGroups      = "rest/api/2/groups/picker?maxResults=1000"
 	groupMemebers  = "rest/api/2/group/member?groupname="
 	allRoles       = "rest/api/2/role"
+	allProjects    = "rest/api/2/project/"
 )
 
 func NewClient() *Client {
@@ -81,8 +84,16 @@ func New(ctx context.Context, instanceURL, accessToken string) (*Client, error) 
 	}, nil
 }
 
+func IsUrl(str string) bool {
+	u, err := url.Parse(str)
+	return err == nil && u.Scheme != "" && u.Host != ""
+}
+
 func getRequest(ctx context.Context, cli *Client, apiUrl string) (*http.Request, string, error) {
-	endpointUrl := fmt.Sprintf("%s/%s", cli.BaseURL, apiUrl)
+	var endpointUrl string = apiUrl
+	if !IsUrl(apiUrl) {
+		endpointUrl = fmt.Sprintf("%s/%s", cli.BaseURL, apiUrl)
+	}
 	uri, err := url.Parse(endpointUrl)
 	if err != nil {
 		return nil, "", err
@@ -212,4 +223,69 @@ func (client *Client) ListAllRoles(ctx context.Context) ([]RolesAPIData, error) 
 
 	defer resp.Body.Close()
 	return rolesData, err
+}
+
+// GetUser
+// Returns specific users
+func (client *Client) GetUser(ctx context.Context, userName string) (jira.User, error) {
+	var usersAPIData []UsersAPIData
+	req, endpointUrl, err := getRequest(ctx, client, allUsersV2+userName)
+	if err != nil {
+		return jira.User{}, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&usersAPIData))
+	if err != nil {
+		return jira.User{}, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	user := usersAPIData[0]
+
+	return jira.User{
+		Self:         user.Self,
+		Key:          user.Key,
+		Name:         user.Name,
+		EmailAddress: user.Name,
+		DisplayName:  user.DisplayName,
+		Active:       user.Active,
+		TimeZone:     user.TimeZone,
+		Locale:       user.Locale,
+	}, err
+}
+
+// GetProjectRoles
+// Returns all project roles that are present in specific project
+func (client *Client) GetProjectRoles(ctx context.Context, projectId string) (map[string]string, error) {
+	var projectRolesAPIData map[string]string
+	req, endpointUrl, err := getRequest(ctx, client, allProjects+projectId+"/role")
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&projectRolesAPIData))
+	if err != nil {
+		return nil, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return projectRolesAPIData, err
+}
+
+// GetProjectRoleDetails
+// Returns all role details that are present in specific project
+func (client *Client) GetProjectRoleDetails(ctx context.Context, urlApi string) (RolesAPIData, error) {
+	var projectRoleDetailsAPIData RolesAPIData
+	req, endpointUrl, err := getRequest(ctx, client, urlApi)
+	if err != nil {
+		return RolesAPIData{}, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&projectRoleDetailsAPIData))
+	if err != nil {
+		return RolesAPIData{}, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return projectRoleDetailsAPIData, err
 }

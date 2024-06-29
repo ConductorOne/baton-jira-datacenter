@@ -2,19 +2,48 @@ package connector
 
 import (
 	"context"
+	"fmt"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
+	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	sdkResource "github.com/conductorone/baton-sdk/pkg/types/resource"
 
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
+	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 )
 
 type projectBuilder struct {
 	client *client.Client
 }
+
+const (
+	administerProjects              = "ADMINISTER_PROJECTS"
+	browseArchive                   = "BROWSE_ARCHIVE"
+	browseProjects                  = "BROWSE_PROJECTS"
+	editSprintNameandGoalPermission = "EDIT_SPRINT_NAME_AND_GOAL_PERMISSION"
+	manageSprintsPermission         = "MANAGE_SPRINTS_PERMISSION"
+	startStopSprintsPermission      = "START_STOP_SPRINTS_PERMISSION"
+	viewDevTools                    = "VIEW_DEV_TOOLS"
+	viewReadonlyWorkflow            = "VIEW_READONLY_WORKFLOW"
+)
+
+var projectPermissions = []string{administerProjects,
+	browseArchive,
+	browseProjects,
+	editSprintNameandGoalPermission,
+	manageSprintsPermission,
+	startStopSprintsPermission,
+	viewDevTools,
+	viewReadonlyWorkflow,
+}
+
+const (
+	userRole  = "atlassian-user-role-actor"
+	groupRole = "atlassian-group-role-actor"
+)
 
 func projectResource(ctx context.Context, project jira.Project, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	profile := map[string]interface{}{
@@ -65,12 +94,62 @@ func (p *projectBuilder) List(ctx context.Context, parentResourceID *v2.Resource
 	return ret, "", nil, nil
 }
 
-func (o *projectBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+func (p *projectBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+	var rv []*v2.Entitlement
+	projectId := resource.Id.Resource
+	projectRoles, err := p.client.GetProjectRoles(ctx, projectId)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	for _, uri := range projectRoles {
+		role, err := p.client.GetProjectRoleDetails(ctx, uri)
+		if err != nil {
+			return nil, "", nil, err
+		}
+
+		permission := role.Name
+		// create entitlements for each project role
+		permissionOptions := []ent.EntitlementOption{
+			ent.WithGrantableTo(userResourceType, groupResourceType),
+			ent.WithDisplayName(fmt.Sprintf("%s Project %s", resource.DisplayName, permission)),
+			ent.WithDescription(fmt.Sprintf("%s access to %s project in Jira DC", titleCase(permission), resource.DisplayName)),
+		}
+
+		rv = append(rv, ent.NewPermissionEntitlement(
+			resource,
+			permission,
+			permissionOptions...,
+		))
+	}
+
+	return rv, "", nil, nil
 }
 
 func (p *projectBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+	var rv []*v2.Grant
+	projectId := resource.Id.Resource
+	projectRoles, err := p.client.GetProjectRoles(ctx, projectId)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	for _, uri := range projectRoles {
+		role, err := p.client.GetProjectRoleDetails(ctx, uri)
+		if err != nil {
+			return nil, "", nil, err
+		}
+
+		rs, err := roleResource(ctx, role, nil)
+		if err != nil {
+			return nil, "", nil, err
+		}
+
+		membershipGrant := grant.NewGrant(resource, role.Name, rs.Id)
+		rv = append(rv, membershipGrant)
+	}
+
+	return rv, "", nil, nil
 }
 
 func newProjectBuilder(client *client.Client) *projectBuilder {
