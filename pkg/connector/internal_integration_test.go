@@ -77,6 +77,10 @@ func TestRoleBuilderList(t *testing.T) {
 }
 
 func TestProjectBuilderGrants(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
 	pToken := &pagination.Token{}
 	cli, _ := client.New(ctx, instanceUrl, accessToken)
 	p := &projectBuilder{
