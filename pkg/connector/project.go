@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -118,14 +119,48 @@ func (p *projectBuilder) Grants(ctx context.Context, resource *v2.Resource, pTok
 		if err != nil {
 			return nil, "", nil, err
 		}
-
-		rs, err := roleResource(ctx, role, nil)
+		// Getting actors from role
+		roleDetails, err := p.client.GetRole(ctx, strconv.Itoa(role.ID))
 		if err != nil {
 			return nil, "", nil, err
 		}
 
-		membershipGrant := grant.NewGrant(resource, role.Name, rs.Id)
-		rv = append(rv, membershipGrant)
+		for _, actor := range roleDetails.Actors {
+			switch actor.Type {
+			case userRole:
+				user, err := p.client.GetUser(ctx, actor.Name)
+				if err != nil {
+					return nil, "", nil, err
+				}
+
+				ur, err := userResource(user)
+				if err != nil {
+					return nil, "", nil, err
+				}
+
+				membershipGrant := grant.NewGrant(resource, role.Name, ur.Id)
+				rv = append(rv, membershipGrant)
+			case groupRole:
+				group := client.Group{
+					Name: actor.Name,
+				}
+				gr, err := groupResource(ctx, group, nil)
+				if err != nil {
+					return nil, "", nil, err
+				}
+
+				membershipGrant := grant.NewGrant(resource, role.Name, gr.Id)
+				rv = append(rv, membershipGrant)
+			}
+		}
+
+		// rs, err := roleResource(ctx, role, nil)
+		// if err != nil {
+		// 	return nil, "", nil, err
+		// }
+
+		// membershipGrant := grant.NewGrant(resource, role.Name, rs.Id)
+		// rv = append(rv, membershipGrant)
 	}
 
 	return rv, "", nil, nil

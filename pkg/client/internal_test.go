@@ -97,7 +97,26 @@ func TestClientGetProjectRoleDetails(t *testing.T) {
 	}
 
 	client, _ := New(ctx, instanceUrl, accessToken)
-	roles, err := client.GetProjectRoleDetails(ctx, "http://localhost:8080/rest/api/2/project/10000/role/10002")
+	roles, err := client.GetProjectRoleDetails(ctx, "http://localhost:8080/rest/api/2/project/10000/role/10002?expand=actors")
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+
+	roles, err = client.GetProjectRoleDetails(ctx, "http://localhost:8080/rest/api/2/project/10000/role/10100?expand=actors")
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+}
+
+func TestClientGetRole(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	roles, err := client.GetRole(ctx, "10002")
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+
+	roles, err = client.GetRole(ctx, "10100")
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
 }

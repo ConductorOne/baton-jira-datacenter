@@ -289,3 +289,21 @@ func (client *Client) GetProjectRoleDetails(ctx context.Context, urlApi string) 
 	defer resp.Body.Close()
 	return projectRoleDetailsAPIData, err
 }
+
+// GetRole
+// Return specific roles.
+func (client *Client) GetRole(ctx context.Context, roleId string) (RolesAPIData, error) {
+	var rolesData RolesAPIData
+	req, endpointUrl, err := getRequest(ctx, client, allRoles+"/"+roleId)
+	if err != nil {
+		return RolesAPIData{}, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&rolesData))
+	if err != nil {
+		return RolesAPIData{}, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return rolesData, err
+}
