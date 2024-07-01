@@ -40,16 +40,17 @@ func (b *JiraError) Error() string {
 // GET - http://{baseurl}/rest/api/2/role
 // GET - http://{baseurl}/rest/api/2/project
 // GET - http://{baseurl}/rest/api/2/groups/picker
-// GET - http://{baseurl}/rest/api/2/group/member?includeInactiveUsers=false&maxResults=1000&startAt=0&groupname=jira-software-users",
+// GET /jira/rest/api/2/groups/picker?query=.
 const (
-	allPermissions = "rest/api/2/permissions"
-	allUsersV2     = "rest/api/2/user/search?username="
-	allUsers       = "rest/api/latest/user/search?username=.&maxResults=1000"
-	allGroups      = "rest/api/2/groups/picker?maxResults=1000"
-	groupMemebers  = "rest/api/2/group/member?groupname="
-	allRoles       = "rest/api/2/role"
-	allProjects    = "rest/api/2/project/"
-	groupRoles     = "rest/api/2/groups/picker"
+	allPermissions  = "rest/api/2/permissions"
+	allUsersV2      = "rest/api/2/user/search?username="
+	allUsers        = "rest/api/latest/user/search?username=.&maxResults=1000"
+	allGroups       = "rest/api/2/groups/picker?maxResults=1000"
+	groupMembers    = "rest/api/2/group/member?groupname="
+	allRoles        = "rest/api/2/role"
+	allProjects     = "rest/api/2/project/"
+	groupRoles      = "rest/api/2/groups/picker"
+	groupRolesQuery = "rest/api/2/groups/picker?query="
 )
 
 func NewClient() *Client {
@@ -196,7 +197,7 @@ func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 // Returns all group members that are present in specific groups.
 func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]GroupUser, error) {
 	var groupMembersAPIData GroupMembersAPIData
-	req, endpointUrl, err := getRequest(ctx, client, groupMemebers+groupName)
+	req, endpointUrl, err := getRequest(ctx, client, groupMembers+groupName)
 	if err != nil {
 		return nil, err
 	}
@@ -327,4 +328,30 @@ func (client *Client) GetGroupRole(ctx context.Context) ([]Group, error) {
 
 	defer resp.Body.Close()
 	return groupRolesData.Groups, err
+}
+
+// GetGroupRoles
+// Return all group roles.
+func (client *Client) GetGroupRoles(ctx context.Context, groupName string) ([]Labels, error) {
+	var (
+		groupRoleData GroupRolesAPIData
+		groupRoles    []Labels
+	)
+	req, endpointUrl, err := getRequest(ctx, client, groupRolesQuery+groupName)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&groupRoleData))
+	if err != nil {
+		return nil, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+
+	for _, group := range groupRoleData.Groups {
+		groupRoles = append(groupRoles, group.Labels...)
+	}
+
+	return groupRoles, err
 }

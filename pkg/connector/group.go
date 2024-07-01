@@ -8,6 +8,7 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
+	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	sdkResource "github.com/conductorone/baton-sdk/pkg/types/resource"
 
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
@@ -97,7 +98,36 @@ func (g *groupBuilder) Entitlements(ctx context.Context, resource *v2.Resource, 
 }
 
 func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+	var rv []*v2.Grant
+	groupId := resource.Id.Resource
+	groupMembers, err := g.client.GetGroupMembers(ctx, groupId)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	for _, member := range groupMembers {
+		roles, err := g.client.GetGroupRoles(ctx, groupId)
+		if err != nil {
+			return nil, "", nil, err
+		}
+		for _, role := range roles {
+			permission := role.Text
+			user, err := g.client.GetUser(ctx, member.Name)
+			if err != nil {
+				return nil, "", nil, err
+			}
+
+			ur, err := userResource(user)
+			if err != nil {
+				return nil, "", nil, err
+			}
+
+			membershipGrant := grant.NewGrant(resource, permission, ur.Id)
+			rv = append(rv, membershipGrant)
+		}
+	}
+
+	return rv, "", nil, nil
 }
 
 func newGroupBuilder(client *client.Client) *groupBuilder {

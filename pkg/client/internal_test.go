@@ -52,10 +52,36 @@ func TestClientGetGroupMembers(t *testing.T) {
 		t.Skip()
 	}
 
+	tests := []struct {
+		name      string
+		groupName string
+	}{
+		{
+			name:      "Checking local-group",
+			groupName: "local-group",
+		},
+		{
+			name:      "Checking jira-software-users",
+			groupName: "jira-software-users",
+		},
+		{
+			name:      "Checking jira-administrators",
+			groupName: "jira-administrators",
+		},
+		{
+			name:      "Checking global-group",
+			groupName: "global-group",
+		},
+	}
+
 	client, _ := New(ctx, instanceUrl, accessToken)
-	roles, err := client.GetGroupMembers(ctx, "jira-software-users")
-	assert.Nil(t, err)
-	assert.NotNil(t, roles)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			roles, err := client.GetGroupMembers(ctx, test.groupName)
+			assert.Nil(t, err)
+			assert.NotNil(t, roles)
+		})
+	}
 }
 
 func TestClientListAllRoles(t *testing.T) {
@@ -155,6 +181,17 @@ func TestClientGetGroupRole(t *testing.T) {
 
 	client, _ := New(ctx, instanceUrl, accessToken)
 	roles, err := client.GetGroupRole(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+}
+
+func TestClientGetGroupRoles(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	roles, err := client.GetGroupRoles(ctx, "global-group")
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
 }
