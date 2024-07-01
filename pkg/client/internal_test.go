@@ -120,3 +120,14 @@ func TestClientGetRole(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
 }
+
+func TestClientGetGroupRole(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	roles, err := client.GetGroupRole(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+}

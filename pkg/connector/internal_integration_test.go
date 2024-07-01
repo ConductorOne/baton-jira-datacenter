@@ -98,3 +98,19 @@ func TestProjectBuilderGrants(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, gr)
 }
+
+func TestGroupBuilderEntitlements(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	pToken := &pagination.Token{}
+	resource := &v2.Resource{}
+	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	g := &groupBuilder{
+		client: cli,
+	}
+	rv, _, _, err := g.Entitlements(ctx, resource, pToken)
+	assert.Nil(t, err)
+	assert.NotNil(t, rv)
+}

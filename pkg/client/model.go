@@ -84,3 +84,9 @@ type UsersAPIData struct {
 	TimeZone     string     `json:"timeZone"`
 	Locale       string     `json:"locale"`
 }
+
+type GroupRolesAPIData struct {
+	Header string  `json:"header"`
+	Total  int     `json:"total"`
+	Groups []Group `json:"groups"`
+}

@@ -39,6 +39,7 @@ func (b *JiraError) Error() string {
 // GET - http://{baseurl}/rest/api/latest/user/search?username=.&maxResults=1000
 // GET - http://{baseurl}/rest/api/2/role
 // GET - http://{baseurl}/rest/api/2/project
+// GET - http://{baseurl}/rest/api/2/groups/picker
 const (
 	allPermissions = "rest/api/2/permissions"
 	allUsersV2     = "rest/api/2/user/search?username="
@@ -47,6 +48,7 @@ const (
 	groupMemebers  = "rest/api/2/group/member?groupname="
 	allRoles       = "rest/api/2/role"
 	allProjects    = "rest/api/2/project/"
+	groupRoles     = "rest/api/2/groups/picker"
 )
 
 func NewClient() *Client {
@@ -306,4 +308,22 @@ func (client *Client) GetRole(ctx context.Context, roleId string) (RolesAPIData,
 
 	defer resp.Body.Close()
 	return rolesData, err
+}
+
+// GetGroupRole
+// Return specific all group roles.
+func (client *Client) GetGroupRole(ctx context.Context) ([]Group, error) {
+	var groupRolesData GroupRolesAPIData
+	req, endpointUrl, err := getRequest(ctx, client, groupRoles)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&groupRolesData))
+	if err != nil {
+		return nil, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return groupRolesData.Groups, err
 }

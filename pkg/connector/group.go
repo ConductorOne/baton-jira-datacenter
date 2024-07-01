@@ -2,10 +2,12 @@ package connector
 
 import (
 	"context"
+	"fmt"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
+	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	sdkResource "github.com/conductorone/baton-sdk/pkg/types/resource"
 
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
@@ -61,8 +63,32 @@ func (g *groupBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 	return ret, "", nil, nil
 }
 
-func (g *groupBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+func (g *groupBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+	var rv []*v2.Entitlement
+	groupRoles, err := g.client.GetGroupRole(ctx)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	for _, group := range groupRoles {
+		for _, groupRole := range group.Labels {
+			permission := groupRole.Text
+			// create entitlements for each project role
+			permissionOptions := []ent.EntitlementOption{
+				ent.WithGrantableTo(userResourceType, groupResourceType),
+				ent.WithDisplayName(fmt.Sprintf("%s Group %s", resource.DisplayName, permission)),
+				ent.WithDescription(fmt.Sprintf("%s access to %s group in Jira DC", titleCase(permission), resource.DisplayName)),
+			}
+
+			rv = append(rv, ent.NewPermissionEntitlement(
+				resource,
+				permission,
+				permissionOptions...,
+			))
+		}
+	}
+
+	return rv, "", nil, nil
 }
 
 func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
