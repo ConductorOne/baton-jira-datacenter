@@ -104,13 +104,83 @@ func TestGroupBuilderEntitlements(t *testing.T) {
 		t.Skip()
 	}
 
+	tests := []struct {
+		nTest  string
+		Name   string
+		HTML   string
+		Labels []client.Labels
+	}{
+		{
+			nTest: "Checking global-group",
+			Name:  "global-group",
+			HTML:  "global-group",
+			Labels: []client.Labels{
+				{
+					Text:  "Admin",
+					Title: "Users added to this group will be given administrative access",
+					Type:  "ADMIN",
+				},
+			},
+		},
+		{
+			nTest: "Checking jira-administrators",
+			Name:  "jira-administrators",
+			HTML:  "jira-administrators",
+			Labels: []client.Labels{
+				{
+					Text:  "Admin",
+					Title: "Users added to this group will be given administrative access",
+					Type:  "ADMIN",
+				},
+				{
+					Text:  "Jira Software",
+					Title: "Users added to this group will be given access to \u003Cstrong\u003EJira Software\u003C/strong\u003E",
+					Type:  "SINGLE",
+				},
+			},
+		},
+		{
+			nTest: "Checking jira-software-users",
+			Name:  "jira-software-users",
+			HTML:  "jira-software-users",
+			Labels: []client.Labels{
+				{
+					Text:  "Jira Software",
+					Title: "Users added to this group will be given access to \u003Cstrong\u003EJira Software\u003C/strong\u003E",
+					Type:  "SINGLE",
+				},
+			},
+		},
+		{
+			nTest:  "empty labels",
+			Name:   "local-group",
+			HTML:   "local-group",
+			Labels: []client.Labels{},
+		},
+	}
+
 	pToken := &pagination.Token{}
-	resource := &v2.Resource{}
 	cli, _ := client.New(ctx, instanceUrl, accessToken)
 	g := &groupBuilder{
 		client: cli,
 	}
-	rv, _, _, err := g.Entitlements(ctx, resource, pToken)
-	assert.Nil(t, err)
-	assert.NotNil(t, rv)
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			group := client.Group{
+				Name:   test.Name,
+				HTML:   test.HTML,
+				Labels: test.Labels,
+			}
+			resource, err := groupResource(ctx, group, nil)
+			assert.Nil(t, err)
+			rv, _, _, err := g.Entitlements(ctx, resource, pToken)
+			assert.Nil(t, err)
+			if test.nTest == "empty labels" {
+				assert.Nil(t, rv)
+				t.Skip()
+			}
+
+			assert.NotNil(t, rv)
+		})
+	}
 }

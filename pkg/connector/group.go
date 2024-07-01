@@ -65,12 +65,17 @@ func (g *groupBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 
 func (g *groupBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	var rv []*v2.Entitlement
+	groupId := resource.Id.Resource
 	groupRoles, err := g.client.GetGroupRole(ctx)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
 	for _, group := range groupRoles {
+		if group.Name != groupId {
+			continue
+		}
+
 		for _, groupRole := range group.Labels {
 			permission := groupRole.Text
 			// create entitlements for each project role
