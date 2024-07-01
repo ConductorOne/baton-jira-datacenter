@@ -40,6 +40,7 @@ func (b *JiraError) Error() string {
 // GET - http://{baseurl}/rest/api/2/role
 // GET - http://{baseurl}/rest/api/2/project
 // GET - http://{baseurl}/rest/api/2/groups/picker
+// GET - http://{baseurl}/rest/api/2/group/member?includeInactiveUsers=false&maxResults=1000&startAt=0&groupname=jira-software-users",
 const (
 	allPermissions = "rest/api/2/permissions"
 	allUsersV2     = "rest/api/2/user/search?username="

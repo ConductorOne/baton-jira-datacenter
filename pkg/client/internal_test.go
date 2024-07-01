@@ -96,14 +96,28 @@ func TestClientGetProjectRoleDetails(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
-	roles, err := client.GetProjectRoleDetails(ctx, "http://localhost:8080/rest/api/2/project/10000/role/10002?expand=actors")
-	assert.Nil(t, err)
-	assert.NotNil(t, roles)
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{
+			name: "Checking role 10002",
+			url:  "http://localhost:8080/rest/api/2/project/10000/role/10002?expand=actors",
+		},
+		{
+			name: "Checking role 10100",
+			url:  "http://localhost:8080/rest/api/2/project/10000/role/10100?expand=actors",
+		},
+	}
 
-	roles, err = client.GetProjectRoleDetails(ctx, "http://localhost:8080/rest/api/2/project/10000/role/10100?expand=actors")
-	assert.Nil(t, err)
-	assert.NotNil(t, roles)
+	client, _ := New(ctx, instanceUrl, accessToken)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			roles, err := client.GetProjectRoleDetails(ctx, test.url)
+			assert.Nil(t, err)
+			assert.NotNil(t, roles)
+		})
+	}
 }
 
 func TestClientGetRole(t *testing.T) {
@@ -111,14 +125,27 @@ func TestClientGetRole(t *testing.T) {
 		t.Skip()
 	}
 
+	tests := []struct {
+		name   string
+		roleId string
+	}{
+		{
+			name:   "Checking role 10002",
+			roleId: "10002",
+		},
+		{
+			name:   "Checking role 10100",
+			roleId: "10100",
+		},
+	}
 	client, _ := New(ctx, instanceUrl, accessToken)
-	roles, err := client.GetRole(ctx, "10002")
-	assert.Nil(t, err)
-	assert.NotNil(t, roles)
-
-	roles, err = client.GetRole(ctx, "10100")
-	assert.Nil(t, err)
-	assert.NotNil(t, roles)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			roles, err := client.GetRole(ctx, test.roleId)
+			assert.Nil(t, err)
+			assert.NotNil(t, roles)
+		})
+	}
 }
 
 func TestClientGetGroupRole(t *testing.T) {
