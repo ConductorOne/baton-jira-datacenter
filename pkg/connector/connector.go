@@ -21,6 +21,10 @@ type Connector struct {
 func (d *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
 	return []connectorbuilder.ResourceSyncer{
 		newUserBuilder(d.jiraClient),
+		newProjectBuilder(d.jiraClient),
+		newPermissionBuilder(d.jiraClient),
+		newGroupBuilder(d.jiraClient),
+		newRoleBuilder(d.jiraClient),
 	}
 }
 
