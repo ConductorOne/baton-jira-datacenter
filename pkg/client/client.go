@@ -32,14 +32,14 @@ func (b *JiraError) Error() string {
 	return b.ErrorMessage
 }
 
-// GET - http://{baseurl}/rest/api/2/permissions
-// GET - http://{baseurl}/rest/api/2/user/search?username=.
-// GET - http://{baseurl}/rest/api/2/groups/picker?maxResults=1000
-// GET - http://{baseurl}/rest/api/2/group/member?groupname={groupname}
-// GET - http://{baseurl}/rest/api/latest/user/search?username=.&maxResults=1000
-// GET - http://{baseurl}/rest/api/2/role
-// GET - http://{baseurl}/rest/api/2/project
-// GET - http://{baseurl}/rest/api/2/groups/picker
+// GET - {instanceURL}/rest/api/2/permissions
+// GET - {instanceURL}/rest/api/2/user/search?username=.
+// GET - {instanceURL}/rest/api/2/groups/picker?maxResults=1000
+// GET - {instanceURL}/rest/api/2/group/member?groupname={groupname}
+// GET - {instanceURL}/rest/api/latest/user/search?username=.&maxResults=1000
+// GET - {instanceURL}/rest/api/2/role
+// GET - {instanceURL}/rest/api/2/project
+// GET - {instanceURL}/rest/api/2/groups/picker
 // GET /jira/rest/api/2/groups/picker?query=.
 const (
 	allPermissions  = "rest/api/2/permissions"
