@@ -111,5 +111,14 @@ type Permissions struct {
 	Permission string `json:"permission"`
 }
 type Holder struct {
-	Type string `json:"type"`
+	Type        string      `json:"type,omitempty"`
+	Parameter   string      `json:"parameter,omitempty"`
+	ProjectRole ProjectRole `json:"projectRole,omitempty"`
+}
+
+type ProjectRole struct {
+	Self        string `json:"self,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Id          int    `json:"id,omitempty"`
+	Description string `json:"description,omitempty"`
 }

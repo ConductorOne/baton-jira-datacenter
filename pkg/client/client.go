@@ -356,19 +356,19 @@ func (client *Client) GetGroupLabelRoles(ctx context.Context, groupName string) 
 
 // ListAllPermissionScheme
 // Returns all permission schemes that are present in the Jira DC.
-func (client *Client) ListAllPermissionScheme(ctx context.Context) (any, error) {
+func (client *Client) ListAllPermissionScheme(ctx context.Context) (PermissionSchemes, error) {
 	var permissionSchemesAPIData PermissionSchemesAPIData
-	// var permissionSchemesAPIData any
 	req, endpointUrl, err := getRequest(ctx, client, allPermissionScheme)
 	if err != nil {
-		return nil, err
+		return PermissionSchemes{}, err
 	}
 
 	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&permissionSchemesAPIData))
 	if err != nil {
-		return nil, getCustomError(err, resp, endpointUrl)
+		return PermissionSchemes{}, getCustomError(err, resp, endpointUrl)
 	}
 
 	defer resp.Body.Close()
-	return permissionSchemesAPIData, err
+	// This is the default Permission Scheme. Any new projects that are created will be assigned this scheme.
+	return permissionSchemesAPIData.PermissionSchemes[0], err
 }
