@@ -106,10 +106,11 @@ func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 	}
 
 	for _, member := range groupMembers {
-		roles, err := g.client.GetGroupRoles(ctx, groupId)
+		roles, err := g.client.GetGroupLabelRoles(ctx, groupId)
 		if err != nil {
 			return nil, "", nil, err
 		}
+
 		for _, role := range roles {
 			permission := role.Text
 			user, err := g.client.GetUser(ctx, member.Name)

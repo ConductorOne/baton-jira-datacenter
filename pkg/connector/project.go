@@ -153,6 +153,14 @@ func (p *projectBuilder) Grants(ctx context.Context, resource *v2.Resource, pTok
 				rv = append(rv, membershipGrant)
 			}
 		}
+
+		rs, err := roleResource(ctx, role, nil)
+		if err != nil {
+			return nil, "", nil, err
+		}
+
+		membershipGrant := grant.NewGrant(resource, role.Name, rs.Id)
+		rv = append(rv, membershipGrant)
 	}
 
 	return rv, "", nil, nil
