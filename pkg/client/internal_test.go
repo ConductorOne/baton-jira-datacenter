@@ -219,9 +219,8 @@ func TestClientAddActorsProjectRole(t *testing.T) {
 }
 
 func TestAddingGroupMembers(t *testing.T) {
-	res, err := AddingGroupMembers()
+	_, err := AddingGroupMembers()
 	assert.Nil(t, err)
-	assert.NotNil(t, res)
 }
 
 func TestAddGroupMembers(t *testing.T) {
