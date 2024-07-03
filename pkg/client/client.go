@@ -44,8 +44,8 @@ func (b *JiraError) Error() string {
 const (
 	allPermissions      = "rest/api/2/permissions"
 	allUsersV2          = "rest/api/2/user/search?username="
-	allUsers            = "rest/api/latest/user/search?username=.&maxResults=1000"
-	allGroups           = "rest/api/2/groups/picker?maxResults=1000"
+	allUsers            = "rest/api/latest/user/search?username=.&maxResults=10000"
+	allGroups           = "rest/api/2/groups/picker?maxResults=10000"
 	groupMembers        = "rest/api/2/group/member?groupname="
 	allRoles            = "rest/api/2/role"
 	allProjects         = "rest/api/2/project/"
