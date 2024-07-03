@@ -39,7 +39,6 @@ func main() {
 
 func getConnector(ctx context.Context, cfg *config) (types.ConnectorServer, error) {
 	l := ctxzap.Extract(ctx)
-
 	cb, err := connector.New(ctx, cfg.InstanceURL, cfg.AccessToken)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))

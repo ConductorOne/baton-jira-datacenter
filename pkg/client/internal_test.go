@@ -206,3 +206,31 @@ func TestClientListAllPermissionScheme(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
 }
+
+func TestClientAddActorsProjectRole(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	roles, err := client.AddActorsProjectRole(ctx, "10000", "10002")
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+}
+
+func TestAddingGroupMembers(t *testing.T) {
+	res, err := AddingGroupMembers()
+	assert.Nil(t, err)
+	assert.NotNil(t, res)
+}
+
+func TestAddGroupMembers(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	res, err := client.AddGroupMembers()
+	assert.Nil(t, err)
+	assert.NotNil(t, res)
+}
