@@ -1,8 +1,10 @@
-version: '3'
 services:
   jira_node_1:
     depends_on:
-      - postgresql
+      postgresql:
+        condition: service_healthy
+      data-loader:
+        condition: service_completed_successfully
     image: atlassian/jira-software:9.12.4
     networks:
       - jiranet
@@ -46,6 +48,28 @@ services:
       options:
         max-size: "500k"
         max-file: "50"
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "jiradb", "-U", "jira" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  data-loader:
+    image: postgres:9.5-alpine
+    volumes:
+      - ./data:/data
+    networks:
+      - jiranet
+    environment:
+      PGDATABASE: jiradb
+      PGUSER: jira
+      PGPASSWORD: jira
+      PGHOST: postgresql
+    command: sh /data/load.sh
+    depends_on:
+      postgresql:
+        condition: service_healthy
 
 volumes:
   baton-jira-postgresqldata:
