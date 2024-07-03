@@ -42,15 +42,16 @@ func (b *JiraError) Error() string {
 // GET - http://{baseurl}/rest/api/2/groups/picker
 // GET /jira/rest/api/2/groups/picker?query=.
 const (
-	allPermissions  = "rest/api/2/permissions"
-	allUsersV2      = "rest/api/2/user/search?username="
-	allUsers        = "rest/api/latest/user/search?username=.&maxResults=1000"
-	allGroups       = "rest/api/2/groups/picker?maxResults=1000"
-	groupMembers    = "rest/api/2/group/member?groupname="
-	allRoles        = "rest/api/2/role"
-	allProjects     = "rest/api/2/project/"
-	groupRoles      = "rest/api/2/groups/picker"
-	groupRolesQuery = "rest/api/2/groups/picker?query="
+	allPermissions      = "rest/api/2/permissions"
+	allUsersV2          = "rest/api/2/user/search?username="
+	allUsers            = "rest/api/latest/user/search?username=.&maxResults=10000"
+	allGroups           = "rest/api/2/groups/picker?maxResults=10000"
+	groupMembers        = "rest/api/2/group/member?groupname="
+	allRoles            = "rest/api/2/role"
+	allProjects         = "rest/api/2/project/"
+	groupRoles          = "rest/api/2/groups/picker"
+	groupRolesQuery     = "rest/api/2/groups/picker?query="
+	allPermissionScheme = "rest/api/2/permissionscheme?expand=permissions"
 )
 
 func NewClient() *Client {
@@ -170,7 +171,6 @@ func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
 	}
 
 	defer resp.Body.Close()
-
 	return usersData, err
 }
 
@@ -189,7 +189,6 @@ func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 	}
 
 	defer resp.Body.Close()
-
 	return groupsData.Groups, err
 }
 
@@ -295,7 +294,7 @@ func (client *Client) GetProjectRoleDetails(ctx context.Context, urlApi string) 
 }
 
 // GetRole
-// Return specific roles.
+// Return specific role.
 func (client *Client) GetRole(ctx context.Context, roleId string) (RolesAPIData, error) {
 	var rolesData RolesAPIData
 	req, endpointUrl, err := getRequest(ctx, client, allRoles+"/"+roleId)
@@ -330,9 +329,9 @@ func (client *Client) GetGroupRole(ctx context.Context) ([]Group, error) {
 	return groupRolesData.Groups, err
 }
 
-// GetGroupRoles
-// Return all group roles.
-func (client *Client) GetGroupRoles(ctx context.Context, groupName string) ([]Labels, error) {
+// GetGroupLabelRoles
+// Return group roles.
+func (client *Client) GetGroupLabelRoles(ctx context.Context, groupName string) ([]Labels, error) {
 	var (
 		groupRoleData GroupRolesAPIData
 		groupRoles    []Labels
@@ -348,10 +347,28 @@ func (client *Client) GetGroupRoles(ctx context.Context, groupName string) ([]La
 	}
 
 	defer resp.Body.Close()
-
 	for _, group := range groupRoleData.Groups {
 		groupRoles = append(groupRoles, group.Labels...)
 	}
 
 	return groupRoles, err
+}
+
+// ListAllPermissionScheme
+// Returns all permission schemes that are present in the Jira DC.
+func (client *Client) ListAllPermissionScheme(ctx context.Context) (PermissionSchemes, error) {
+	var permissionSchemesAPIData PermissionSchemesAPIData
+	req, endpointUrl, err := getRequest(ctx, client, allPermissionScheme)
+	if err != nil {
+		return PermissionSchemes{}, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&permissionSchemesAPIData))
+	if err != nil {
+		return PermissionSchemes{}, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	// This is the default Permission Scheme. Any new projects that are created will be assigned this scheme.
+	return permissionSchemesAPIData.PermissionSchemes[0], err
 }

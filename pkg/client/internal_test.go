@@ -191,7 +191,18 @@ func TestClientGetGroupRoles(t *testing.T) {
 	}
 
 	client, _ := New(ctx, instanceUrl, accessToken)
-	roles, err := client.GetGroupRoles(ctx, "global-group")
+	roles, err := client.GetGroupLabelRoles(ctx, "global-group")
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+}
+
+func TestClientListAllPermissionScheme(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	roles, err := client.ListAllPermissionScheme(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
 }

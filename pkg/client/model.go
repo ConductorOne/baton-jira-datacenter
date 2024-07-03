@@ -90,3 +90,35 @@ type GroupRolesAPIData struct {
 	Total  int     `json:"total"`
 	Groups []Group `json:"groups"`
 }
+
+type PermissionSchemesAPIData struct {
+	PermissionSchemes []PermissionSchemes `json:"permissionSchemes,omitempty"`
+}
+
+type PermissionSchemes struct {
+	Expand      string        `json:"expand,omitempty"`
+	ID          int           `json:"id,omitempty"`
+	Self        string        `json:"self,omitempty"`
+	Name        string        `json:"name,omitempty"`
+	Description string        `json:"description,omitempty"`
+	Permissions []Permissions `json:"permissions,omitempty"`
+}
+
+type Permissions struct {
+	ID         int    `json:"id"`
+	Self       string `json:"self"`
+	Holder     Holder `json:"holder"`
+	Permission string `json:"permission"`
+}
+type Holder struct {
+	Type        string      `json:"type,omitempty"`
+	Parameter   string      `json:"parameter,omitempty"`
+	ProjectRole ProjectRole `json:"projectRole,omitempty"`
+}
+
+type ProjectRole struct {
+	Self        string `json:"self,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Id          int    `json:"id,omitempty"`
+	Description string `json:"description,omitempty"`
+}
