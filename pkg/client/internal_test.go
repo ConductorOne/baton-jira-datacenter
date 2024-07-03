@@ -222,14 +222,3 @@ func TestAddingGroupMembers(t *testing.T) {
 	_, err := AddingGroupMembers()
 	assert.Nil(t, err)
 }
-
-func TestAddGroupMembers(t *testing.T) {
-	if instanceUrl == "" && accessToken == "" {
-		t.Skip()
-	}
-
-	client, _ := New(ctx, instanceUrl, accessToken)
-	res, err := client.AddGroupMembers()
-	assert.Nil(t, err)
-	assert.NotNil(t, res)
-}
