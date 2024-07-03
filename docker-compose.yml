@@ -13,12 +13,6 @@ services:
     ports:
       - '8080:8080'
       - '8000:8000'
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/" ]
-      interval: 10s
-      timeout: 5s
-      retries: 15
-      start_period: 120s
     environment:
       - 'ATL_JDBC_URL=jdbc:postgresql://postgresql:5432/jiradb'
       - 'ATL_JDBC_USER=jira'

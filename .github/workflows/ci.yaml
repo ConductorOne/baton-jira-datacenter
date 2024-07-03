@@ -56,15 +56,28 @@ jobs:
           go-version: 1.22.x
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Run Docker Compose as a Daemon (to start postgres and jira)
         run: docker-compose -f ./docker-compose.yml up --detach
+
       - name: Build baton-jira-datacenter
         run: go build ./cmd/baton-jira-datacenter
-      - name: Run baton-jira-datacenter
-        run: ./baton-jira-datacenter
 
       - name: Install baton
         run: ./scripts/get-baton.sh && mv baton /usr/local/bin
+
+      - name: Wait for Jira to finish starting up
+        uses: nick-fields/retry@v3
+        with:
+          timeout_seconds: 5
+          retry_wait_seconds: 10
+          max_attempts: 10
+          retry_on: error
+          command: |
+            curl -H "Authorization: Bearer ${{secrets.PERSONAL_ACCESS_TOKEN}}" -f http://localhost:8080/rest/auth/latest/session
+
+      - name: Run baton-jira-datacenter
+        run: ./baton-jira-datacenter
 
       - name: Check for grant before revoking
         run: baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
