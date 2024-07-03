@@ -430,11 +430,11 @@ func getPostRequest(ctx context.Context, cli *Client, apiUrl string, body any) (
 func (client *Client) AddActorsProjectRole(ctx context.Context, projectId, roleId string) (any, error) {
 	var permissionSchemesAPIData any
 	type Body struct {
-		GroupID []string `json:"groupId"`
+		Group []string `json:"group"`
 	}
 	url := fmt.Sprintf("%s%s/role/%s", allProjects, projectId, roleId)
 	body := Body{
-		GroupID: []string{
+		Group: []string{
 			"jira-administrators",
 		},
 	}

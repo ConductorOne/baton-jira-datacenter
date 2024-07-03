@@ -219,6 +219,10 @@ func TestClientAddActorsProjectRole(t *testing.T) {
 }
 
 func TestAddingGroupMembersFails(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
 	_, err := AddingGroupMembers(accessToken)
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
 }
