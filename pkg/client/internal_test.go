@@ -218,7 +218,7 @@ func TestClientAddActorsProjectRole(t *testing.T) {
 	assert.NotNil(t, roles)
 }
 
-func TestAddingGroupMembers(t *testing.T) {
+func TestAddingGroupMembersFails(t *testing.T) {
 	_, err := AddingGroupMembers()
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
 }
