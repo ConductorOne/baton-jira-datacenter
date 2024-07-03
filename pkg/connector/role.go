@@ -166,6 +166,10 @@ func (r *roleBuilder) Grant(ctx context.Context, principal *v2.Resource, entitle
 	return nil, nil
 }
 
+func (r *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+	return nil, nil
+}
+
 func newRoleBuilder(client *client.Client) *roleBuilder {
 	return &roleBuilder{
 		client: client,
