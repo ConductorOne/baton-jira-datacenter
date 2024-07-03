@@ -3,10 +3,63 @@
   "resourceTypeCapabilities": [
     {
       "resourceType": {
+        "id": "group",
+        "displayName": "Group",
+        "traits": [
+          "TRAIT_GROUP"
+        ]
+      },
+      "capabilities": [
+        "CAPABILITY_SYNC"
+      ]
+    },
+    {
+      "resourceType": {
+        "id": "permission",
+        "displayName": "Permission",
+        "traits": [
+          "TRAIT_GROUP"
+        ]
+      },
+      "capabilities": [
+        "CAPABILITY_SYNC"
+      ]
+    },
+    {
+      "resourceType": {
+        "id": "project",
+        "displayName": "Project",
+        "traits": [
+          "TRAIT_GROUP"
+        ]
+      },
+      "capabilities": [
+        "CAPABILITY_SYNC"
+      ]
+    },
+    {
+      "resourceType": {
+        "id": "role",
+        "displayName": "Role",
+        "traits": [
+          "TRAIT_GROUP"
+        ]
+      },
+      "capabilities": [
+        "CAPABILITY_SYNC"
+      ]
+    },
+    {
+      "resourceType": {
         "id": "user",
         "displayName": "User",
         "traits": [
           "TRAIT_USER"
+        ],
+        "annotations": [
+          {
+            "@type": "type.googleapis.com/c1.connector.v2.SkipEntitlementsAndGrants"
+          }
         ]
       },
       "capabilities": [
@@ -15,7 +68,7 @@
     }
   ],
   "connectorCapabilities": [
-    "CAPABILITY_SYNC",
-    "CAPABILITY_TICKETING"
+    "CAPABILITY_TICKETING",
+    "CAPABILITY_SYNC"
   ]
 }
