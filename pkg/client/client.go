@@ -454,7 +454,7 @@ func (client *Client) AddActorsProjectRole(ctx context.Context, projectId, roleI
 }
 
 // This a temporary test.
-func AddingGroupMembers() (any, error) {
+func AddingGroupMembers(accessToken string) (any, error) {
 	var data = strings.NewReader(`{"group": ["jira-administrators"]}`)
 	client := &http.Client{}
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://localhost:8080/rest/api/2/project/10000/role/10002", data)
@@ -465,8 +465,7 @@ func AddingGroupMembers() (any, error) {
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	// set crdentials just for local testing
-	// req.SetBasicAuth("adminuser", "Shrimp2013--")
-	req.Header.Set("Authorization", "Bearer MDA2MjQ2NjMyNDQ1OrU7hY/KBkHSYd9OPyXXXX+lDfvV")
+	req.Header.Set("Authorization", "Bearer "+accessToken)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err

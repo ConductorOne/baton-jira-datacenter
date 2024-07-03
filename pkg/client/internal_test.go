@@ -118,8 +118,6 @@ func TestClientGetProjectRoles(t *testing.T) {
 }
 
 func TestClientGetProjectRoleDetails(t *testing.T) {
-	instanceUrl = "http://localhost:8080"
-	accessToken = "MDA2MjQ2NjMyNDQ1OrU7hY/KBkHSYd9OPyXXXX+lDfvV"
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}
@@ -221,6 +219,6 @@ func TestClientAddActorsProjectRole(t *testing.T) {
 }
 
 func TestAddingGroupMembersFails(t *testing.T) {
-	_, err := AddingGroupMembers()
+	_, err := AddingGroupMembers(accessToken)
 	assert.Nil(t, err)
 }
