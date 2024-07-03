@@ -4,16 +4,15 @@
 
 `baton-jira-datacenter` is a connector for jira-datacenter built using the [Baton SDK](https://github.com/conductorone/baton-sdk). It communicates with the jira-datacenter API to sync data about users and roles.
 
-Check out [Baton](https://github.com/conductorone/baton) to learn more the project in general.
+Check out [Baton](https://github.com/conductorone/baton) to learn more about the project in general.
 
 # Getting Started
 
-## Dev
 A docker compose file exists to help you start up a local Jira Data Center instance.
 
 It is recommended that you run this on a linux amd64 machine. This is due to the fact that Atlassian does not ship ARM containers, so emulated performance is poor on a ARM macbook.
 
-### Start Jira Data Center
+## Start Jira Data Center
 ```bash
 mkdir -p dev/jira-data
 docker-compose up
