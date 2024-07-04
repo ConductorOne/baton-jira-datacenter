@@ -379,6 +379,7 @@ func getXRequest(ctx context.Context, cli *Client, method, apiUrl string, body B
 	if err != nil {
 		return nil, "", err
 	}
+
 	options = append(options, uhttp.WithAcceptJSONHeader())
 	if method != http.MethodDelete {
 		options = append(options, uhttp.WithJSONBody(body))

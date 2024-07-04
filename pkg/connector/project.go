@@ -123,13 +123,8 @@ func (p *projectBuilder) Grants(ctx context.Context, resource *v2.Resource, pTok
 		if err != nil {
 			return nil, "", nil, err
 		}
-		// Getting actors from role
-		roleDetails, err := p.client.GetRole(ctx, strconv.Itoa(role.ID))
-		if err != nil {
-			return nil, "", nil, err
-		}
 
-		for _, actor := range roleDetails.Actors {
+		for _, actor := range role.Actors {
 			switch actor.Type {
 			case userRole:
 				user, err := p.client.GetUser(ctx, actor.Name)

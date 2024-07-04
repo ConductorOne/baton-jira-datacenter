@@ -230,7 +230,7 @@ func TestClientRemoveActorsProjectRole(t *testing.T) {
 	}
 
 	client, _ := New(ctx, instanceUrl, accessToken)
-	statusCode, err := client.RemoveActorsProjectRole(ctx, "10000", "10002", "group=jira-software-users")
+	statusCode, err := client.RemoveActorsProjectRole(ctx, "10000", "10002", "group=jira-administrators")
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusNoContent, statusCode)
 }
