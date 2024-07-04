@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
@@ -261,6 +262,76 @@ func (p *projectBuilder) Grant(ctx context.Context, principal *v2.Resource, enti
 }
 
 func (p *projectBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+	principal := grant.Principal
+	entitlement := grant.Entitlement
+	if principal.Id.ResourceType != userResourceType.Id &&
+		principal.Id.ResourceType != groupResourceType.Id {
+		l.Warn(
+			"jira(dc)-connector: only users or groups can have role membership revoked",
+			zap.String("principal_id", principal.Id.String()),
+			zap.String("principal_type", principal.Id.ResourceType),
+		)
+
+		return nil, fmt.Errorf("jira(dc)-connector: only users or groups can have role membership revoked")
+	}
+
+	projectResourceId, permissions, err := ParseEntitlementID(entitlement.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	projectId := projectResourceId.Resource
+	roles, err := p.client.ListAllRoles(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	roleName := permissions[2]
+	rolePos := slices.IndexFunc(roles, func(c client.RolesAPIData) bool {
+		return c.Name == roleName
+	})
+
+	if rolePos == NF {
+		return nil, fmt.Errorf("role %s cannot be found", roleName)
+	}
+
+	roleId := strconv.Itoa(roles[rolePos].ID)
+	switch principal.Id.ResourceType {
+	case userResourceType.Id:
+		userName := principal.Id.Resource
+		statusCode, err := p.client.RemoveActorsProjectRole(ctx, projectId, roleId, "user="+userName)
+		err = getError(err)
+		if err != nil {
+			return nil, err
+		}
+
+		if statusCode == http.StatusNoContent {
+			l.Warn("Project Membership has been revoked.",
+				zap.String("userName", userName),
+				zap.String("ProjectId", projectId),
+				zap.String("RoleId", roleId),
+			)
+		}
+	case groupResourceType.Id:
+		groupName := principal.Id.Resource
+		statusCode, err := p.client.RemoveActorsProjectRole(ctx, projectId, roleId, "group="+groupName)
+		err = getError(err)
+		if err != nil {
+			return nil, err
+		}
+
+		if statusCode == http.StatusNoContent {
+			l.Warn("Project Membership has been revoked.",
+				zap.String("GroupName", groupName),
+				zap.String("ProjectId", projectId),
+				zap.String("RoleId", roleId),
+			)
+		}
+	default:
+		return nil, fmt.Errorf("jira(dc) connector: invalid grant resource type: %s", principal.Id.ResourceType)
+	}
+
 	return nil, nil
 }
 

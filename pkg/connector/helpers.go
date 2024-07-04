@@ -66,13 +66,13 @@ func ParseEntitlementID(id string) (*v2.ResourceId, []string, error) {
 }
 
 func getError(err error) error {
-	var bitbucketErr *client.JiraError
+	var jiratErr *client.JiraError
 	if err == nil {
 		return nil
 	}
 
-	if errors.As(err, &bitbucketErr) {
-		return fmt.Errorf("%s %s", bitbucketErr.Error(), bitbucketErr.ErrorSummary)
+	if errors.As(err, &jiratErr) {
+		return fmt.Errorf("%s %s", jiratErr.Error(), jiratErr.ErrorSummary)
 	}
 
 	return err
