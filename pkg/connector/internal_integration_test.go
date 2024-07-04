@@ -211,7 +211,7 @@ func getProjectBuilderForTesting(cli *client.Client) *projectBuilder {
 	}
 }
 
-func TestResourceTypeGrant(t *testing.T) {
+func TestProjectBuilderGrant(t *testing.T) {
 	var roleEntitlement string
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
@@ -244,7 +244,7 @@ func TestResourceTypeGrant(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestResourceTypeRevoke(t *testing.T) {
+func TestProjectBuilderRevoke(t *testing.T) {
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}
