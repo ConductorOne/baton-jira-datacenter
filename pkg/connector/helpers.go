@@ -1,9 +1,11 @@
 package connector
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
@@ -46,4 +48,32 @@ func titleCase(s string) string {
 	titleCaser := cases.Title(language.English)
 
 	return titleCaser.String(s)
+}
+
+func ParseEntitlementID(id string) (*v2.ResourceId, []string, error) {
+	parts := strings.Split(id, ":")
+	// Need to be at least 3 parts type:entitlement_id:slug
+	if len(parts) < 3 || len(parts) > 3 {
+		return nil, nil, fmt.Errorf("jira(DC)-connector: invalid resource id")
+	}
+
+	resourceId := &v2.ResourceId{
+		ResourceType: parts[0],
+		Resource:     strings.Join(parts[1:len(parts)-1], ":"),
+	}
+
+	return resourceId, parts, nil
+}
+
+func getError(err error) error {
+	var bitbucketErr *client.JiraError
+	if err == nil {
+		return nil
+	}
+
+	if errors.As(err, &bitbucketErr) {
+		return fmt.Errorf("%s %s", bitbucketErr.Error(), bitbucketErr.ErrorSummary)
+	}
+
+	return err
 }

@@ -122,3 +122,7 @@ type ProjectRole struct {
 	Id          int    `json:"id,omitempty"`
 	Description string `json:"description,omitempty"`
 }
+
+type Body struct {
+	Group []string `json:"group"`
+}

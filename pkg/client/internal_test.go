@@ -213,7 +213,7 @@ func TestClientAddActorsProjectRole(t *testing.T) {
 	}
 
 	client, _ := New(ctx, instanceUrl, accessToken)
-	roles, err := client.AddActorsProjectRole(ctx, "10000", "10002")
+	roles, err := client.AddActorsProjectRole(ctx, "10000", "10002", "jira-administrators")
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
 }

@@ -1,9 +1,7 @@
 package client
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -370,40 +368,6 @@ func (client *Client) ListAllPermissionScheme(ctx context.Context) (PermissionSc
 	return permissionSchemesAPIData.PermissionSchemes[0], err
 }
 
-func WithBody(body string) uhttp.RequestOption {
-	return func() (io.ReadWriter, map[string]string, error) {
-		var buffer bytes.Buffer
-		_, err := buffer.WriteString(body)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		_, headers, err := uhttp.WithContentTypeJSONHeader()()
-		if err != nil {
-			return nil, nil, err
-		}
-
-		return &buffer, headers, nil
-	}
-}
-
-func WithJSONBodyV2(body interface{}) uhttp.RequestOption {
-	return func() (io.ReadWriter, map[string]string, error) {
-		buffer := new(bytes.Buffer)
-		err := json.NewEncoder(buffer).Encode(body)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		_, headers, err := uhttp.WithContentTypeJSONHeader()()
-		if err != nil {
-			return nil, nil, err
-		}
-
-		return buffer, headers, nil
-	}
-}
-
 func getPostRequest(ctx context.Context, cli *Client, apiUrl string, body any) (*http.Request, string, error) {
 	endpointUrl := fmt.Sprintf("%s/%s", cli.BaseURL, apiUrl)
 	uri, err := url.Parse(endpointUrl)
@@ -415,7 +379,6 @@ func getPostRequest(ctx context.Context, cli *Client, apiUrl string, body any) (
 		http.MethodPost,
 		uri,
 		uhttp.WithAcceptJSONHeader(),
-		uhttp.WithContentTypeJSONHeader(),
 		uhttp.WithJSONBody(body),
 	)
 	if err != nil {
@@ -427,15 +390,12 @@ func getPostRequest(ctx context.Context, cli *Client, apiUrl string, body any) (
 
 // AddActorsProjectRole
 // Add actors to project role in the Jira DC.
-func (client *Client) AddActorsProjectRole(ctx context.Context, projectId, roleId string) (any, error) {
-	var permissionSchemesAPIData any
-	type Body struct {
-		Group []string `json:"group"`
-	}
+func (client *Client) AddActorsProjectRole(ctx context.Context, projectId, roleId, groupName string) (any, error) {
+	var actorsAPIData any
 	url := fmt.Sprintf("%s%s/role/%s", allProjects, projectId, roleId)
 	body := Body{
 		Group: []string{
-			"jira-administrators",
+			groupName,
 		},
 	}
 	req, endpointUrl, err := getPostRequest(ctx, client, url, body)
@@ -443,14 +403,14 @@ func (client *Client) AddActorsProjectRole(ctx context.Context, projectId, roleI
 		return PermissionSchemes{}, err
 	}
 
-	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&permissionSchemesAPIData))
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&actorsAPIData))
 	if err != nil {
 		return PermissionSchemes{}, getCustomError(err, resp, endpointUrl)
 	}
 
 	defer resp.Body.Close()
 	// This is the default Permission Scheme. Any new projects that are created will be assigned this scheme.
-	return permissionSchemesAPIData, err
+	return actorsAPIData, err
 }
 
 // This a temporary test.
@@ -478,25 +438,4 @@ func AddingGroupMembers(accessToken string) (any, error) {
 	}
 
 	return bodyText, nil
-}
-
-func (client *Client) AddGroupMembers() (any, error) {
-	var APIData any
-	var data = strings.NewReader(`{"groupId": [\"jira-administrators\"]}`)
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://localhost:8080/rest/api/2/project/10000/role/10002", data)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	// set crdentials just for local testing
-	req.SetBasicAuth("mchavez", "Shrimp2013--")
-	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&APIData))
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	return APIData, nil
 }
