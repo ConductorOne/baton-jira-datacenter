@@ -3,7 +3,6 @@ package connector
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strconv"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
@@ -206,29 +205,52 @@ func (p *projectBuilder) Grant(ctx context.Context, principal *v2.Resource, enti
 	switch principal.Id.ResourceType {
 	case userResourceType.Id:
 		userId := principal.Id.Resource
-		statusCode, err := p.client.AddActorsProjectRole(ctx, projectId, "roleId", "groupName")
-		if err != nil {
-			return nil, err
+		body := client.BodyActors{
+			User: []string{
+				userId,
+			},
 		}
-
-		if statusCode == http.StatusOK {
-			l.Warn("Role has been created.",
-				zap.String("userId", userId),
-				zap.String("projectId", projectId),
-			)
-		}
-	case groupResourceType.Id:
-		groupName := principal.Id.Resource
-		statusCode, err := p.client.AddActorsProjectRole(ctx, projectId, roleId, groupName)
+		actors, err := p.client.AddActorsProjectRole(ctx, projectId, roleId, body)
 		err = getError(err)
 		if err != nil {
 			return nil, err
 		}
 
-		if statusCode == http.StatusOK {
+		actorPos := slices.IndexFunc(actors.Actors, func(c client.Actors) bool {
+			return c.Name == userId
+		})
+
+		if actorPos != NF {
 			l.Warn("Role has been created.",
-				zap.String("groupId", groupName),
-				zap.String("projectId", projectId),
+				zap.String("Name", actors.Actors[actorPos].Name),
+				zap.String("DisplayName", actors.Actors[actorPos].DisplayName),
+				zap.String("Type", actors.Actors[actorPos].Type),
+				zap.Int("ID", actors.Actors[actorPos].ID),
+			)
+		}
+	case groupResourceType.Id:
+		groupName := principal.Id.Resource
+		body := client.BodyActors{
+			Group: []string{
+				groupName,
+			},
+		}
+		actors, err := p.client.AddActorsProjectRole(ctx, projectId, roleId, body)
+		err = getError(err)
+		if err != nil {
+			return nil, err
+		}
+
+		actorPos := slices.IndexFunc(actors.Actors, func(c client.Actors) bool {
+			return c.Name == groupName
+		})
+
+		if actorPos != NF {
+			l.Warn("Role has been created.",
+				zap.String("Name", actors.Actors[actorPos].Name),
+				zap.String("DisplayName", actors.Actors[actorPos].DisplayName),
+				zap.String("Type", actors.Actors[actorPos].Type),
+				zap.Int("ID", actors.Actors[actorPos].ID),
 			)
 		}
 	default:

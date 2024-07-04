@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"testing"
 
@@ -213,16 +214,23 @@ func TestClientAddActorsProjectRole(t *testing.T) {
 	}
 
 	client, _ := New(ctx, instanceUrl, accessToken)
-	roles, err := client.AddActorsProjectRole(ctx, "10000", "10002", "jira-administrators")
+	body := BodyActors{
+		Group: []string{
+			"jira-software-users",
+		},
+	}
+	roles, err := client.AddActorsProjectRole(ctx, "10000", "10002", body)
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
 }
 
-func TestAddingGroupMembersFails(t *testing.T) {
+func TestClientRemoveActorsProjectRole(t *testing.T) {
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}
 
-	_, err := AddingGroupMembers(accessToken)
-	assert.NotNil(t, err)
+	client, _ := New(ctx, instanceUrl, accessToken)
+	statusCode, err := client.RemoveActorsProjectRole(ctx, "10000", "10002", "group=jira-software-users")
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusNoContent, statusCode)
 }

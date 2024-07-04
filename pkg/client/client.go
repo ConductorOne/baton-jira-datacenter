@@ -3,11 +3,8 @@ package client
 import (
 	"context"
 	"fmt"
-	"io"
-	"log"
 	"net/http"
 	"net/url"
-	"strings"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
@@ -44,6 +41,10 @@ func (b *JiraError) Error() string {
 // GET - {instanceURL}/rest/api/2/project
 // GET - {instanceURL}/rest/api/2/groups/picker
 // GET - {instanceURL}/rest/api/2/groups/picker?query=.
+// POST - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{id}
+// DELETE - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{roleId}?user={username}
+// DELETE - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{roleId}?group={groupname}
+
 const (
 	allPermissions      = "rest/api/2/permissions"
 	allUsersV2          = "rest/api/2/user/search?username="
@@ -368,18 +369,25 @@ func (client *Client) ListAllPermissionScheme(ctx context.Context) (PermissionSc
 	return permissionSchemesAPIData.PermissionSchemes[0], err
 }
 
-func getPostRequest(ctx context.Context, cli *Client, apiUrl string, body any) (*http.Request, string, error) {
+func getXRequest(ctx context.Context, cli *Client, method, apiUrl string, body BodyActors) (*http.Request, string, error) {
+	var (
+		req     *http.Request
+		options []uhttp.RequestOption
+	)
 	endpointUrl := fmt.Sprintf("%s/%s", cli.BaseURL, apiUrl)
 	uri, err := url.Parse(endpointUrl)
 	if err != nil {
 		return nil, "", err
 	}
+	options = append(options, uhttp.WithAcceptJSONHeader())
+	if method != http.MethodDelete {
+		options = append(options, uhttp.WithJSONBody(body))
+	}
 
-	req, err := cli.httpClient.NewRequest(ctx,
-		http.MethodPost,
+	req, err = cli.httpClient.NewRequest(ctx,
+		method,
 		uri,
-		uhttp.WithAcceptJSONHeader(),
-		uhttp.WithJSONBody(body),
+		options...,
 	)
 	if err != nil {
 		return nil, "", err
@@ -390,52 +398,39 @@ func getPostRequest(ctx context.Context, cli *Client, apiUrl string, body any) (
 
 // AddActorsProjectRole
 // Add actors to project role in the Jira DC.
-func (client *Client) AddActorsProjectRole(ctx context.Context, projectId, roleId, groupName string) (any, error) {
-	var actorsAPIData any
+// https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/project/{projectIdOrKey}/role-addActorUsers
+func (client *Client) AddActorsProjectRole(ctx context.Context, projectId, roleId string, body BodyActors) (ActorsAPIData, error) {
+	var actorsAPIData ActorsAPIData
 	url := fmt.Sprintf("%s%s/role/%s", allProjects, projectId, roleId)
-	body := Body{
-		Group: []string{
-			groupName,
-		},
-	}
-	req, endpointUrl, err := getPostRequest(ctx, client, url, body)
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, url, body)
 	if err != nil {
-		return PermissionSchemes{}, err
+		return ActorsAPIData{}, err
 	}
 
 	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&actorsAPIData))
 	if err != nil {
-		return PermissionSchemes{}, getCustomError(err, resp, endpointUrl)
+		return ActorsAPIData{}, getCustomError(err, resp, endpointUrl)
 	}
 
 	defer resp.Body.Close()
-	// This is the default Permission Scheme. Any new projects that are created will be assigned this scheme.
 	return actorsAPIData, err
 }
 
-// This a temporary test.
-func AddingGroupMembers(accessToken string) (any, error) {
-	var data = strings.NewReader(`{"group": ["jira-administrators"]}`)
-	client := &http.Client{}
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://localhost:8080/rest/api/2/project/10000/role/10002", data)
+// RemoveActorsProjectRole
+// Remove actors in the Jira DC.
+// https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/project/{projectIdOrKey}/role-deleteActor
+func (client *Client) RemoveActorsProjectRole(ctx context.Context, projectId, roleId, actor string) (int, error) {
+	url := fmt.Sprintf("%s%s/role/%s?%s", allProjects, projectId, roleId, actor)
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, url, BodyActors{})
 	if err != nil {
-		log.Fatal(err)
+		return 0, err
 	}
 
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	// set crdentials just for local testing
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-	resp, err := client.Do(req)
+	resp, err := client.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return 0, getCustomError(err, resp, endpointUrl)
 	}
 
 	defer resp.Body.Close()
-	bodyText, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return bodyText, nil
+	return resp.StatusCode, err
 }

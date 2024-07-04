@@ -123,6 +123,19 @@ type ProjectRole struct {
 	Description string `json:"description,omitempty"`
 }
 
-type Body struct {
+type BodyActors struct {
 	Group []string `json:"group"`
+	User  []string `json:"user"`
+}
+
+type BodyActorsUser struct {
+	User []string `json:"user"`
+}
+
+type ActorsAPIData struct {
+	Self        string   `json:"self"`
+	Name        string   `json:"name"`
+	ID          int      `json:"id"`
+	Description string   `json:"description"`
+	Actors      []Actors `json:"actors"`
 }
