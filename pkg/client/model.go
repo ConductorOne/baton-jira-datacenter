@@ -128,10 +128,6 @@ type BodyActors struct {
 	User  []string `json:"user"`
 }
 
-type BodyActorsUser struct {
-	User []string `json:"user"`
-}
-
 type ActorsAPIData struct {
 	Self        string   `json:"self"`
 	Name        string   `json:"name"`

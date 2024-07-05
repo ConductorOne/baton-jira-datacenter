@@ -201,9 +201,23 @@ func (p *projectBuilder) Grant(ctx context.Context, principal *v2.Resource, enti
 	switch principal.Id.ResourceType {
 	case userResourceType.Id:
 		userId := principal.Id.Resource
+		users, err := p.client.ListAllUsers(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		userPos := slices.IndexFunc(users, func(c jira.User) bool {
+			return c.Key == userId
+		})
+
+		if rolePos == NF {
+			return nil, fmt.Errorf("user %s cannot be found", userId)
+		}
+
+		userName := users[userPos].Name
 		body := client.BodyActors{
 			User: []string{
-				userId,
+				userName,
 			},
 		}
 		actors, err := p.client.AddActorsProjectRole(ctx, projectId, roleId, body)
@@ -213,7 +227,7 @@ func (p *projectBuilder) Grant(ctx context.Context, principal *v2.Resource, enti
 		}
 
 		actorPos := slices.IndexFunc(actors.Actors, func(c client.Actors) bool {
-			return c.Name == userId
+			return c.Name == userName
 		})
 
 		if actorPos != NF {

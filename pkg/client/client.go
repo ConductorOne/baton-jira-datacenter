@@ -398,7 +398,8 @@ func getXRequest(ctx context.Context, cli *Client, method, apiUrl string, body B
 }
 
 // AddActorsProjectRole
-// Add actors to project role in the Jira DC.
+// Adds an actor (user or group) to a project role in the Jira DC.
+// For user actors, their usernames should be used.
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/project/{projectIdOrKey}/role-addActorUsers
 func (client *Client) AddActorsProjectRole(ctx context.Context, projectId, roleId string, body BodyActors) (ActorsAPIData, error) {
 	var actorsAPIData ActorsAPIData
@@ -418,7 +419,7 @@ func (client *Client) AddActorsProjectRole(ctx context.Context, projectId, roleI
 }
 
 // RemoveActorsProjectRole
-// Remove actors in the Jira DC.
+// Deletes actors (users or groups) from a project role in the Jira DC.
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/project/{projectIdOrKey}/role-deleteActor
 func (client *Client) RemoveActorsProjectRole(ctx context.Context, projectId, roleId, actor string) (int, error) {
 	url := fmt.Sprintf("%s%s/role/%s?%s", allProjects, projectId, roleId, actor)

@@ -232,10 +232,51 @@ func TestProjectBuilderGrant(t *testing.T) {
 	group := getGroupForTesting(groupName)
 	principal, err := groupResource(ctx, *group, nil)
 	assert.Nil(t, err)
-	project := jira.Project{
+	project := getProjectForTesting(projectId)
+	resource, err := projectResource(ctx, *project, nil)
+	assert.Nil(t, err)
+	entitlement := getEntitlementForTesting(resource, grantPrincipalType, roleEntitlement)
+	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	projectBuilder := getProjectBuilderForTesting(cli)
+	_, err = projectBuilder.Grant(ctx, principal, entitlement)
+	assert.Nil(t, err)
+}
+
+func getUserForTesting(userId string) *jira.User {
+	return &jira.User{
+		Key: userId,
+	}
+}
+
+func getProjectForTesting(projectId string) *jira.Project {
+	return &jira.Project{
 		ID: projectId,
 	}
-	resource, err := projectResource(ctx, project, nil)
+}
+
+func TestProjectBuilderGrantUsers(t *testing.T) {
+	var roleEntitlement string
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	// --grant-entitlement project:10000:Administrators
+	// --grant-principal-type user
+	// --grant-principal jira-administrators
+	grantEntitlement := "project:10000:Administrators"
+	grantPrincipal := "JIRAUSER10103"
+	grantPrincipalType := "user"
+	_, data, err := ParseEntitlementID(grantEntitlement)
+	assert.Nil(t, err)
+	assert.NotNil(t, data)
+	projectId := data[1]
+	roleEntitlement = data[2]
+	groupName := grantPrincipal
+	user := getUserForTesting(groupName)
+	principal, err := userResource(*user)
+	assert.Nil(t, err)
+	project := getProjectForTesting(projectId)
+	resource, err := projectResource(ctx, *project, nil)
 	assert.Nil(t, err)
 	entitlement := getEntitlementForTesting(resource, grantPrincipalType, roleEntitlement)
 	cli, _ := client.New(ctx, instanceUrl, accessToken)
@@ -265,10 +306,8 @@ func TestProjectBuilderRevoke(t *testing.T) {
 	group := getGroupForTesting(groupName)
 	principal, err := groupResource(ctx, *group, nil)
 	assert.Nil(t, err)
-	project := jira.Project{
-		ID: projectId,
-	}
-	resource, err := projectResource(ctx, project, nil)
+	project := getProjectForTesting(projectId)
+	resource, err := projectResource(ctx, *project, nil)
 	assert.Nil(t, err)
 	cli, _ := client.New(ctx, instanceUrl, accessToken)
 	projectBuilder := getProjectBuilderForTesting(cli)
