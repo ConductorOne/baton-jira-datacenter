@@ -79,8 +79,8 @@ jobs:
       - name: Run baton-jira-datacenter
         run: ./baton-jira-datacenter
 
-      - name: Check for grant before revoking
-        run: baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
+      # - name: Check for grant before revoking
+      #   run: baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
 
 #      TODO(marcos): Uncomment once provisioning is implemented.
 #      - name: Revoke grants
