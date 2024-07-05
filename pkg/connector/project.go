@@ -308,7 +308,21 @@ func (p *projectBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotatio
 	roleId := strconv.Itoa(roles[rolePos].ID)
 	switch principal.Id.ResourceType {
 	case userResourceType.Id:
-		userName := principal.Id.Resource
+		userId := principal.Id.Resource
+		users, err := p.client.ListAllUsers(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		userPos := slices.IndexFunc(users, func(c jira.User) bool {
+			return c.Key == userId
+		})
+
+		if rolePos == NF {
+			return nil, fmt.Errorf("user %s cannot be found", userId)
+		}
+
+		userName := users[userPos].Name
 		statusCode, err := p.client.RemoveActorsProjectRole(ctx, projectId, roleId, "user="+userName)
 		err = getError(err)
 		if err != nil {
