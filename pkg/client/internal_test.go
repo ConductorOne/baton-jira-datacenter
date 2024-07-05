@@ -243,10 +243,8 @@ func TestClientAddUserToGroupFails(t *testing.T) {
 	client, _ := New(ctx, instanceUrl, accessToken)
 	userName, err := client.GetUserName(ctx, "JIRAUSER10103")
 	assert.Nil(t, err)
-	body := BodyActors{
-		Name: userName,
-	}
-	_, err = client.AddUserToGroup(ctx, "jira-software-users", body)
+
+	_, err = client.AddUserToGroup(ctx, "jira-software-users", userName)
 	assert.NotNil(t, err)
 }
 
@@ -258,10 +256,8 @@ func TestClientAddUserToGroup(t *testing.T) {
 	client, _ := New(ctx, instanceUrl, accessToken)
 	userName, err := client.GetUserName(ctx, "JIRAUSER10103")
 	assert.Nil(t, err)
-	body := BodyActors{
-		Name: userName,
-	}
-	statusCode, err := client.AddUserToGroup(ctx, "jira-administrators", body)
+
+	statusCode, err := client.AddUserToGroup(ctx, "jira-administrators", userName)
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusCreated, statusCode)
 }
@@ -274,6 +270,7 @@ func TestClientRemoveUserFromGroup(t *testing.T) {
 	client, _ := New(ctx, instanceUrl, accessToken)
 	userName, err := client.GetUserName(ctx, "JIRAUSER10103")
 	assert.Nil(t, err)
+
 	statusCode, err := client.RemoveUserFromGroup(ctx, "jira-administrators", userName)
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusOK, statusCode)

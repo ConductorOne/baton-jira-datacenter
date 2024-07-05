@@ -446,8 +446,11 @@ func (client *Client) RemoveActorsProjectRole(ctx context.Context, projectId, ro
 // Adds given user to a group in the Jira DC.
 // Returns the current state of the group.
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/group-addUserToGroup
-func (client *Client) AddUserToGroup(ctx context.Context, groupName string, body BodyActors) (int, error) {
-	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, addUserToGroup+"?groupname="+groupName, body)
+func (client *Client) AddUserToGroup(ctx context.Context, groupName, userName string) (int, error) {
+	url := addUserToGroup + "?groupname=" + groupName
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, url, BodyActors{
+		Name: userName,
+	})
 	if err != nil {
 		return NF, err
 	}

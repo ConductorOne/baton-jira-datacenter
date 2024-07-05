@@ -157,10 +157,7 @@ func (g *groupBuilder) Grant(ctx context.Context, principal *v2.Resource, entitl
 		return nil, err
 	}
 
-	body := client.BodyActors{
-		Name: userName,
-	}
-	statusCode, err := g.client.AddUserToGroup(ctx, groupId, body)
+	statusCode, err := g.client.AddUserToGroup(ctx, groupId, userName)
 	err = getError(err)
 	if err != nil {
 		return nil, err

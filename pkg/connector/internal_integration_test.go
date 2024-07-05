@@ -98,6 +98,7 @@ func TestProjectBuilderGrants(t *testing.T) {
 	}
 	resource, err := projectResource(ctx, project, nil)
 	assert.Nil(t, err)
+
 	gr, _, _, err := p.Grants(ctx, resource, pToken)
 	assert.Nil(t, err)
 	assert.NotNil(t, gr)
@@ -177,8 +178,10 @@ func TestGroupBuilderEntitlements(t *testing.T) {
 			}
 			resource, err := groupResource(ctx, group, nil)
 			assert.Nil(t, err)
+
 			rv, _, _, err := g.Entitlements(ctx, resource, pToken)
 			assert.Nil(t, err)
+
 			if test.nTest == "empty labels" {
 				assert.Nil(t, rv)
 				t.Skip()
@@ -186,34 +189,6 @@ func TestGroupBuilderEntitlements(t *testing.T) {
 
 			assert.NotNil(t, rv)
 		})
-	}
-}
-
-func getGroupForTesting(fullName string) *client.Group {
-	return &client.Group{
-		Name: fullName,
-	}
-}
-
-func getEntitlementForTesting(resource *v2.Resource, resourceDisplayName, roleEntitlement string) *v2.Entitlement {
-	options := []ent.EntitlementOption{
-		ent.WithGrantableTo(roleResourceType),
-		ent.WithDisplayName(fmt.Sprintf("%s Project %s", resourceDisplayName, roleEntitlement)),
-		ent.WithDescription(fmt.Sprintf("%s of %s Jira project", roleEntitlement, resourceDisplayName)),
-	}
-
-	return ent.NewAssignmentEntitlement(resource, roleEntitlement, options...)
-}
-
-func getProjectBuilderForTesting(cli *client.Client) *projectBuilder {
-	return &projectBuilder{
-		client: cli,
-	}
-}
-
-func getGroupBuilderForTesting(cli *client.Client) *groupBuilder {
-	return &groupBuilder{
-		client: cli,
 	}
 }
 
@@ -227,37 +202,28 @@ func TestProjectBuilderGrant(t *testing.T) {
 	// --grant-principal-type group
 	// --grant-principal jira-administrators
 	grantEntitlement := "project:10000:Administrators"
-	grantPrincipal := "jira-administrators"
 	grantPrincipalType := "group"
+	grantPrincipal := "jira-administrators"
 	_, data, err := ParseEntitlementID(grantEntitlement)
 	assert.Nil(t, err)
 	assert.NotNil(t, data)
+
 	projectId := data[1]
 	roleEntitlement = data[2]
 	groupName := grantPrincipal
 	group := getGroupForTesting(groupName)
 	principal, err := groupResource(ctx, *group, nil)
 	assert.Nil(t, err)
+
 	project := getProjectForTesting(projectId)
 	resource, err := projectResource(ctx, *project, nil)
 	assert.Nil(t, err)
+
 	entitlement := getEntitlementForTesting(resource, grantPrincipalType, roleEntitlement)
 	cli, _ := client.New(ctx, instanceUrl, accessToken)
 	projectBuilder := getProjectBuilderForTesting(cli)
 	_, err = projectBuilder.Grant(ctx, principal, entitlement)
 	assert.Nil(t, err)
-}
-
-func getUserForTesting(userId string) *jira.User {
-	return &jira.User{
-		Key: userId,
-	}
-}
-
-func getProjectForTesting(projectId string) *jira.Project {
-	return &jira.Project{
-		ID: projectId,
-	}
 }
 
 func TestProjectBuilderGrantUsers(t *testing.T) {
@@ -275,15 +241,18 @@ func TestProjectBuilderGrantUsers(t *testing.T) {
 	_, data, err := ParseEntitlementID(grantEntitlement)
 	assert.Nil(t, err)
 	assert.NotNil(t, data)
+
 	projectId := data[1]
 	roleEntitlement = data[2]
 	userId := grantPrincipal
 	user := getUserForTesting(userId)
 	principal, err := userResource(*user)
 	assert.Nil(t, err)
+
 	project := getProjectForTesting(projectId)
 	resource, err := projectResource(ctx, *project, nil)
 	assert.Nil(t, err)
+
 	entitlement := getEntitlementForTesting(resource, grantPrincipalType, roleEntitlement)
 	cli, _ := client.New(ctx, instanceUrl, accessToken)
 	projectBuilder := getProjectBuilderForTesting(cli)
@@ -301,20 +270,24 @@ func TestProjectBuilderRevoke(t *testing.T) {
 	_, grantData, err := ParseGrantID(revokeGrant)
 	assert.Nil(t, err)
 	assert.NotNil(t, grantData)
+
 	grantEntitlement := fmt.Sprintf("%s:%s:%s", grantData[0], grantData[1], grantData[2])
 	grantPrincipal := grantData[4]
 	_, entitlemenData, err := ParseEntitlementID(grantEntitlement)
 	assert.Nil(t, err)
 	assert.NotNil(t, entitlemenData)
+
 	projectId := entitlemenData[1]
 	roleId := entitlemenData[2]
 	groupName := grantPrincipal
 	group := getGroupForTesting(groupName)
 	principal, err := groupResource(ctx, *group, nil)
 	assert.Nil(t, err)
+
 	project := getProjectForTesting(projectId)
 	resource, err := projectResource(ctx, *project, nil)
 	assert.Nil(t, err)
+
 	cli, _ := client.New(ctx, instanceUrl, accessToken)
 	projectBuilder := getProjectBuilderForTesting(cli)
 	gr := grant.NewGrant(resource, roleId, principal.Id)
@@ -338,20 +311,24 @@ func TestProjectBuilderRevokeUser(t *testing.T) {
 	_, grantData, err := ParseGrantID(revokeGrant)
 	assert.Nil(t, err)
 	assert.NotNil(t, grantData)
+
 	grantEntitlement := fmt.Sprintf("%s:%s:%s", grantData[0], grantData[1], grantData[2])
 	grantPrincipal := grantData[4]
 	_, entitlemenData, err := ParseEntitlementID(grantEntitlement)
 	assert.Nil(t, err)
 	assert.NotNil(t, entitlemenData)
+
 	projectId := entitlemenData[1]
 	roleId := entitlemenData[2]
 	userId := grantPrincipal
 	user := getUserForTesting(userId)
 	principal, err := userResource(*user)
 	assert.Nil(t, err)
+
 	project := getProjectForTesting(projectId)
 	resource, err := projectResource(ctx, *project, nil)
 	assert.Nil(t, err)
+
 	cli, _ := client.New(ctx, instanceUrl, accessToken)
 	projectBuilder := getProjectBuilderForTesting(cli)
 	gr := grant.NewGrant(resource, roleId, principal.Id)
@@ -380,15 +357,18 @@ func TestGroupBuilderGrantUser(t *testing.T) {
 	_, data, err := ParseEntitlementID(grantEntitlement)
 	assert.Nil(t, err)
 	assert.NotNil(t, data)
+
 	groupId := data[1]
 	roleEntitlement = data[2]
 	userId := grantPrincipal
 	user := getUserForTesting(userId)
 	principal, err := userResource(*user)
 	assert.Nil(t, err)
+
 	group := getGroupForTesting(groupId)
 	resource, err := groupResource(ctx, *group, nil)
 	assert.Nil(t, err)
+
 	entitlement := getEntitlementForTesting(resource, grantPrincipalType, roleEntitlement)
 	cli, _ := client.New(ctx, instanceUrl, accessToken)
 	groupBuilder := getGroupBuilderForTesting(cli)
@@ -406,20 +386,24 @@ func TestGroupBuilderRevokeUser(t *testing.T) {
 	_, grantData, err := ParseGrantID(revokeGrant)
 	assert.Nil(t, err)
 	assert.NotNil(t, grantData)
+
 	grantEntitlement := fmt.Sprintf("%s:%s:%s", grantData[0], grantData[1], grantData[2])
 	grantPrincipal := grantData[4]
 	_, entitlemenData, err := ParseEntitlementID(grantEntitlement)
 	assert.Nil(t, err)
 	assert.NotNil(t, entitlemenData)
+
 	groupId := entitlemenData[1]
 	roleId := entitlemenData[2]
 	userId := grantPrincipal
 	user := getUserForTesting(userId)
 	principal, err := userResource(*user)
 	assert.Nil(t, err)
+
 	group := getGroupForTesting(groupId)
 	resource, err := groupResource(ctx, *group, nil)
 	assert.Nil(t, err)
+
 	cli, _ := client.New(ctx, instanceUrl, accessToken)
 	groupBuilder := getGroupBuilderForTesting(cli)
 	gr := grant.NewGrant(resource, roleId, principal.Id)
@@ -431,4 +415,44 @@ func TestGroupBuilderRevokeUser(t *testing.T) {
 	gr.Annotations = annos
 	_, err = groupBuilder.Revoke(ctx, gr)
 	assert.Nil(t, err)
+}
+
+func getUserForTesting(userId string) *jira.User {
+	return &jira.User{
+		Key: userId,
+	}
+}
+
+func getProjectForTesting(projectId string) *jira.Project {
+	return &jira.Project{
+		ID: projectId,
+	}
+}
+
+func getProjectBuilderForTesting(cli *client.Client) *projectBuilder {
+	return &projectBuilder{
+		client: cli,
+	}
+}
+
+func getGroupBuilderForTesting(cli *client.Client) *groupBuilder {
+	return &groupBuilder{
+		client: cli,
+	}
+}
+
+func getGroupForTesting(fullName string) *client.Group {
+	return &client.Group{
+		Name: fullName,
+	}
+}
+
+func getEntitlementForTesting(resource *v2.Resource, resourceDisplayName, roleEntitlement string) *v2.Entitlement {
+	options := []ent.EntitlementOption{
+		ent.WithGrantableTo(roleResourceType),
+		ent.WithDisplayName(fmt.Sprintf("%s resource %s", resourceDisplayName, roleEntitlement)),
+		ent.WithDescription(fmt.Sprintf("%s of %s Jira project", roleEntitlement, resourceDisplayName)),
+	}
+
+	return ent.NewAssignmentEntitlement(resource, roleEntitlement, options...)
 }
