@@ -126,6 +126,7 @@ type ProjectRole struct {
 type BodyActors struct {
 	Group []string `json:"group"`
 	User  []string `json:"user"`
+	Name  string   `json:"name"`
 }
 
 type ActorsAPIData struct {
@@ -134,4 +135,8 @@ type ActorsAPIData struct {
 	ID          int      `json:"id"`
 	Description string   `json:"description"`
 	Actors      []Actors `json:"actors"`
+}
+
+type Body struct {
+	Name string `json:"name"`
 }

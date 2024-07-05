@@ -234,3 +234,19 @@ func TestClientRemoveActorsProjectRole(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusNoContent, statusCode)
 }
+
+func TestClientAddUserToGroup(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	userName, err := client.GetUserName(ctx, "JIRAUSER10103")
+	assert.Nil(t, err)
+	body := BodyActors{
+		Name: userName,
+	}
+	roles, err := client.AddUserToGroup(ctx, "jira-software-users", body)
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+}

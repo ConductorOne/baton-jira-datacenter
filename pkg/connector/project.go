@@ -201,20 +201,11 @@ func (p *projectBuilder) Grant(ctx context.Context, principal *v2.Resource, enti
 	switch principal.Id.ResourceType {
 	case userResourceType.Id:
 		userId := principal.Id.Resource
-		users, err := p.client.ListAllUsers(ctx)
+		userName, err := p.client.GetUserName(ctx, userId)
 		if err != nil {
 			return nil, err
 		}
 
-		userPos := slices.IndexFunc(users, func(c jira.User) bool {
-			return c.Key == userId
-		})
-
-		if rolePos == NF {
-			return nil, fmt.Errorf("user %s cannot be found", userId)
-		}
-
-		userName := users[userPos].Name
 		body := client.BodyActors{
 			User: []string{
 				userName,
@@ -231,7 +222,7 @@ func (p *projectBuilder) Grant(ctx context.Context, principal *v2.Resource, enti
 		})
 
 		if actorPos != NF {
-			l.Warn("Role has been created.",
+			l.Warn("Project Membership has been created.",
 				zap.String("Name", actors.Actors[actorPos].Name),
 				zap.String("DisplayName", actors.Actors[actorPos].DisplayName),
 				zap.String("Type", actors.Actors[actorPos].Type),
@@ -256,7 +247,7 @@ func (p *projectBuilder) Grant(ctx context.Context, principal *v2.Resource, enti
 		})
 
 		if actorPos != NF {
-			l.Warn("Role has been created.",
+			l.Warn("Project Membership has been created.",
 				zap.String("Name", actors.Actors[actorPos].Name),
 				zap.String("DisplayName", actors.Actors[actorPos].DisplayName),
 				zap.String("Type", actors.Actors[actorPos].Type),
@@ -309,20 +300,11 @@ func (p *projectBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotatio
 	switch principal.Id.ResourceType {
 	case userResourceType.Id:
 		userId := principal.Id.Resource
-		users, err := p.client.ListAllUsers(ctx)
+		userName, err := p.client.GetUserName(ctx, userId)
 		if err != nil {
 			return nil, err
 		}
 
-		userPos := slices.IndexFunc(users, func(c jira.User) bool {
-			return c.Key == userId
-		})
-
-		if rolePos == NF {
-			return nil, fmt.Errorf("user %s cannot be found", userId)
-		}
-
-		userName := users[userPos].Name
 		statusCode, err := p.client.RemoveActorsProjectRole(ctx, projectId, roleId, "user="+userName)
 		err = getError(err)
 		if err != nil {

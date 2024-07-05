@@ -23,7 +23,7 @@ type roleBuilder struct {
 
 const NF = -1
 
-// Create a new connector resource for a jenkins role.
+// Create a new connector resource for a jira role.
 func roleResource(ctx context.Context, role client.RolesAPIData, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	profile := map[string]interface{}{
 		"role_id":          role.ID,

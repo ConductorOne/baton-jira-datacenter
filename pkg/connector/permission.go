@@ -19,7 +19,7 @@ type permissionBuilder struct {
 	client *client.Client
 }
 
-// Create a new connector resource for a jenkins role.
+// Create a new connector resource for a jira role.
 func permissionResource(ctx context.Context, permission client.Permission, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	profile := map[string]interface{}{
 		"permission_id":          permission.Key,

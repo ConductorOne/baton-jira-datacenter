@@ -87,7 +87,7 @@ func ParseGrantID(id string) (*v2.ResourceId, []string, error) {
 	parts := strings.Split(id, ":")
 	// Need to be at least 5 parts type:grant_id:slug:resource_id:resource_type
 	if len(parts) < 5 || len(parts) > 5 {
-		return nil, nil, fmt.Errorf("jenkins-connector: invalid resource id")
+		return nil, nil, fmt.Errorf("jira(dc)-connector: invalid resource id")
 	}
 
 	resourceId := &v2.ResourceId{

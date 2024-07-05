@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
@@ -44,6 +45,8 @@ func (b *JiraError) Error() string {
 // POST - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{id}
 // DELETE - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{roleId}?user={username}
 // DELETE - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{roleId}?group={groupname}
+// POST - {instanceURL}/rest/api/2/group/user
+// DELETE - {instanceURL}/rest/api/2/group/user
 
 const (
 	allPermissions      = "rest/api/2/permissions"
@@ -56,6 +59,8 @@ const (
 	groupRoles          = "rest/api/2/groups/picker"
 	groupRolesQuery     = "rest/api/2/groups/picker?query="
 	allPermissionScheme = "rest/api/2/permissionscheme?expand=permissions"
+	addUserToGroup      = "rest/api/2/group/user"
+	NF                  = -1
 )
 
 func New(ctx context.Context, instanceURL, accessToken string) (*Client, error) {
@@ -435,4 +440,41 @@ func (client *Client) RemoveActorsProjectRole(ctx context.Context, projectId, ro
 
 	defer resp.Body.Close()
 	return resp.StatusCode, err
+}
+
+// AddUserToGroup
+// Adds given user to a group in the Jira DC.
+// Returns the current state of the group.
+// https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/group-addUserToGroup
+func (client *Client) AddUserToGroup(ctx context.Context, groupName string, body BodyActors) (any, error) {
+	var actorsAPIData any
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, addUserToGroup+"?groupname="+groupName, body)
+	if err != nil {
+		return ActorsAPIData{}, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&actorsAPIData))
+	if err != nil {
+		return ActorsAPIData{}, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return actorsAPIData, err
+}
+
+func (client *Client) GetUserName(ctx context.Context, userId string) (string, error) {
+	users, err := client.ListAllUsers(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	userPos := slices.IndexFunc(users, func(c jira.User) bool {
+		return c.Key == userId
+	})
+
+	if userPos == NF {
+		return "", fmt.Errorf("user %s cannot be found", userId)
+	}
+
+	return users[userPos].Name, nil
 }
