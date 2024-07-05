@@ -170,11 +170,11 @@ func (p *projectBuilder) Grant(ctx context.Context, principal *v2.Resource, enti
 	l := ctxzap.Extract(ctx)
 	if principal.Id.ResourceType != userResourceType.Id && principal.Id.ResourceType != groupResourceType.Id {
 		l.Warn(
-			"jira(DC)-connector: only users or groups can be granted role memberships",
+			"jira(dc)-connector: only users or groups can be granted role memberships",
 			zap.String("principal_type", principal.Id.ResourceType),
 			zap.String("principal_id", principal.Id.Resource),
 		)
-		return nil, fmt.Errorf("jira(DC)-connector: only users or groups can be granted role memberships")
+		return nil, fmt.Errorf("jira(dc)-connector: only users or groups can be granted role memberships")
 	}
 
 	_, entitlementID, err := ParseEntitlementID(entitlement.Id)
@@ -255,7 +255,7 @@ func (p *projectBuilder) Grant(ctx context.Context, principal *v2.Resource, enti
 			)
 		}
 	default:
-		return nil, fmt.Errorf("jira(DC)-connector: invalid grant resource type: %s", principal.Id.ResourceType)
+		return nil, fmt.Errorf("jira(dc)-connector: invalid grant resource type: %s", principal.Id.ResourceType)
 	}
 
 	return nil, nil
