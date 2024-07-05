@@ -192,7 +192,7 @@ func TestGroupBuilderEntitlements(t *testing.T) {
 	}
 }
 
-func TestProjectBuilderGrant(t *testing.T) {
+func TestProjectBuilderGrantGroup(t *testing.T) {
 	var roleEntitlement string
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
@@ -260,7 +260,8 @@ func TestProjectBuilderGrantUsers(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestProjectBuilderRevoke(t *testing.T) {
+func TestProjectBuilderRevokeGroup(t *testing.T) {
+
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}

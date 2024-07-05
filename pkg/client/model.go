@@ -13,30 +13,30 @@ type Permission struct {
 }
 
 type GroupsAPIData struct {
-	Header string  `json:"header"`
-	Total  int     `json:"total"`
-	Groups []Group `json:"groups"`
+	Header string  `json:"header,omitempty"`
+	Total  int     `json:"total,omitempty"`
+	Groups []Group `json:"groups,omitempty"`
 }
 
 type Group struct {
-	Name   string   `json:"name"`
-	HTML   string   `json:"html"`
-	Labels []Labels `json:"labels"`
+	Name   string   `json:"name,omitempty"`
+	HTML   string   `json:"html,omitempty"`
+	Labels []Labels `json:"labels,omitempty"`
 }
 
 type Labels struct {
-	Text  string `json:"text"`
-	Title string `json:"title"`
-	Type  string `json:"type"`
+	Text  string `json:"text,omitempty"`
+	Title string `json:"title,omitempty"`
+	Type  string `json:"type,omitempty"`
 }
 
 type GroupMembersAPIData struct {
-	Self       string      `json:"self"`
-	MaxResults int         `json:"maxResults"`
-	StartAt    int         `json:"startAt"`
-	Total      int         `json:"total"`
-	IsLast     bool        `json:"isLast"`
-	Users      []GroupUser `json:"values"`
+	Self       string      `json:"self,omitempty"`
+	MaxResults int         `json:"maxResults,omitempty"`
+	StartAt    int         `json:"startAt,omitempty"`
+	Total      int         `json:"total,omitempty"`
+	IsLast     bool        `json:"isLast,omitempty"`
+	Users      []GroupUser `json:"values,omitempty"`
 }
 
 type AvatarUrls struct {
@@ -47,48 +47,48 @@ type AvatarUrls struct {
 }
 
 type GroupUser struct {
-	Self         string     `json:"self"`
-	Name         string     `json:"name"`
-	Key          string     `json:"key"`
-	EmailAddress string     `json:"emailAddress"`
-	AvatarUrls   AvatarUrls `json:"avatarUrls"`
-	DisplayName  string     `json:"displayName"`
-	Active       bool       `json:"active"`
-	TimeZone     string     `json:"timeZone"`
+	Self         string     `json:"self,omitempty"`
+	Name         string     `json:"name,omitempty"`
+	Key          string     `json:"key,omitempty"`
+	EmailAddress string     `json:"emailAddress,omitempty"`
+	AvatarUrls   AvatarUrls `json:"avatarUrls,omitempty"`
+	DisplayName  string     `json:"displayName,omitempty"`
+	Active       bool       `json:"active,omitempty"`
+	TimeZone     string     `json:"timeZone,omitempty"`
 }
 
 type RolesAPIData struct {
-	Self        string   `json:"self"`
-	Name        string   `json:"name"`
-	ID          int      `json:"id"`
-	Description string   `json:"description"`
-	Actors      []Actors `json:"actors"`
+	Self        string   `json:"self,omitempty"`
+	Name        string   `json:"name,omitempty"`
+	ID          int      `json:"id,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Actors      []Actors `json:"actors,omitempty"`
 }
 
 type Actors struct {
-	ID          int    `json:"id"`
-	DisplayName string `json:"displayName"`
-	Type        string `json:"type"`
-	Name        string `json:"name"`
+	ID          int    `json:"id,omitempty"`
+	DisplayName string `json:"displayName,omitempty"`
+	Type        string `json:"type,omitempty"`
+	Name        string `json:"name,omitempty"`
 }
 
 type UsersAPIData struct {
-	Self         string     `json:"self"`
-	Key          string     `json:"key"`
-	Name         string     `json:"name"`
-	EmailAddress string     `json:"emailAddress"`
-	AvatarUrls   AvatarUrls `json:"avatarUrls"`
-	DisplayName  string     `json:"displayName"`
-	Active       bool       `json:"active"`
-	Deleted      bool       `json:"deleted"`
-	TimeZone     string     `json:"timeZone"`
-	Locale       string     `json:"locale"`
+	Self         string     `json:"self,omitempty"`
+	Key          string     `json:"key,omitempty"`
+	Name         string     `json:"name,omitempty"`
+	EmailAddress string     `json:"emailAddress,omitempty"`
+	AvatarUrls   AvatarUrls `json:"avatarUrls,omitempty"`
+	DisplayName  string     `json:"displayName,omitempty"`
+	Active       bool       `json:"active,omitempty"`
+	Deleted      bool       `json:"deleted,omitempty"`
+	TimeZone     string     `json:"timeZone,omitempty"`
+	Locale       string     `json:"locale,omitempty"`
 }
 
 type GroupRolesAPIData struct {
-	Header string  `json:"header"`
-	Total  int     `json:"total"`
-	Groups []Group `json:"groups"`
+	Header string  `json:"header,omitempty"`
+	Total  int     `json:"total,omitempty"`
+	Groups []Group `json:"groups,omitempty"`
 }
 
 type PermissionSchemesAPIData struct {
@@ -105,10 +105,10 @@ type PermissionSchemes struct {
 }
 
 type Permissions struct {
-	ID         int    `json:"id"`
-	Self       string `json:"self"`
-	Holder     Holder `json:"holder"`
-	Permission string `json:"permission"`
+	ID         int    `json:"id,omitempty"`
+	Self       string `json:"self,omitempty"`
+	Holder     Holder `json:"holder,omitempty"`
+	Permission string `json:"permission,omitempty"`
 }
 type Holder struct {
 	Type        string      `json:"type,omitempty"`
@@ -124,19 +124,19 @@ type ProjectRole struct {
 }
 
 type BodyActors struct {
-	Group []string `json:"group"`
-	User  []string `json:"user"`
-	Name  string   `json:"name"`
+	Group []string `json:"group,omitempty"`
+	User  []string `json:"user,omitempty"`
+	Name  string   `json:"name,omitempty"`
 }
 
 type ActorsAPIData struct {
-	Self        string   `json:"self"`
-	Name        string   `json:"name"`
-	ID          int      `json:"id"`
-	Description string   `json:"description"`
-	Actors      []Actors `json:"actors"`
+	Self        string   `json:"self,omitempty"`
+	Name        string   `json:"name,omitempty"`
+	ID          int      `json:"id,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Actors      []Actors `json:"actors,omitempty"`
 }
 
 type Body struct {
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 }

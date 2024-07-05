@@ -43,9 +43,9 @@ func (b *JiraError) Error() string {
 // GET - {instanceURL}/rest/api/2/groups/picker
 // GET - {instanceURL}/rest/api/2/groups/picker?query=.
 // POST - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{id}
+// POST - {instanceURL}/rest/api/2/group/user
 // DELETE - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{roleId}?user={username}
 // DELETE - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{roleId}?group={groupname}
-// POST - {instanceURL}/rest/api/2/group/user
 // DELETE - {instanceURL}/rest/api/2/group/user?groupname={groupname}&username={username}
 
 const (
@@ -65,7 +65,6 @@ const (
 
 func New(ctx context.Context, instanceURL, accessToken string) (*Client, error) {
 	l := ctxzap.Extract(ctx)
-
 	httpClient, err := uhttp.NewBearerAuth(accessToken).GetClient(ctx)
 	if err != nil {
 		l.Error("error creating http client", zap.Error(err))
@@ -129,7 +128,7 @@ func getCustomError(err error, resp *http.Response, endpointUrl string) *JiraErr
 }
 
 // ListAllPermissions
-// Returns all permissions that are present in the Jira instance - Global, Project and the global ones added by plugins
+// Returns all permissions that are present in the Jira instance
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2-getAllPermissions
 func (client *Client) ListAllPermissions(ctx context.Context) ([]Permission, error) {
 	var permissionsData PermissionsAPIData
@@ -158,7 +157,7 @@ func (client *Client) ListAllPermissions(ctx context.Context) ([]Permission, err
 }
 
 // ListAllUsers
-// Returns all users that are present in the Jira instance - Global, Project and the global ones added by plugins.
+// Returns all users that are present in the Jira instance.
 func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
 	var usersData []jira.User
 	req, endpointUrl, err := getRequest(ctx, client, allUsers)
@@ -176,7 +175,7 @@ func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
 }
 
 // ListAllGroups
-// Returns all groups that are present in the Jira instance - Global, Project and the global ones added by plugins.
+// Returns all groups that are present in the Jira instance.
 func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 	var groupsData GroupsAPIData
 	req, endpointUrl, err := getRequest(ctx, client, allGroups)
@@ -194,7 +193,7 @@ func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 }
 
 // GetGroupMembers
-// Returns all group members that are present in specific groups.
+// Returns all members that are present in a group.
 func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]GroupUser, error) {
 	var groupMembersAPIData GroupMembersAPIData
 	req, endpointUrl, err := getRequest(ctx, client, groupMembers+groupName)
@@ -212,7 +211,7 @@ func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]
 }
 
 // ListAllRoles
-// Returns all roles that are present in the Jira instance - Global, Project and the global ones added by plugins.
+// Returns all roles that are present in the Jira instance.
 func (client *Client) ListAllRoles(ctx context.Context) ([]RolesAPIData, error) {
 	var rolesData []RolesAPIData
 	req, endpointUrl, err := getRequest(ctx, client, allRoles)
@@ -259,7 +258,7 @@ func (client *Client) GetUser(ctx context.Context, userName string) (jira.User, 
 }
 
 // GetProjectRoles
-// Returns all project roles that are present in specific project.
+// Returns all roles that are present in specific project.
 func (client *Client) GetProjectRoles(ctx context.Context, projectId string) (map[string]string, error) {
 	var projectRolesAPIData map[string]string
 	req, endpointUrl, err := getRequest(ctx, client, allProjects+projectId+"/role")
@@ -313,7 +312,7 @@ func (client *Client) GetRole(ctx context.Context, roleId string) (RolesAPIData,
 }
 
 // GetGroupRole
-// Return specific all group roles.
+// Return all group roles.
 func (client *Client) GetGroupRole(ctx context.Context) ([]Group, error) {
 	var groupRolesData GroupRolesAPIData
 	req, endpointUrl, err := getRequest(ctx, client, groupRoles)
@@ -331,7 +330,7 @@ func (client *Client) GetGroupRole(ctx context.Context) ([]Group, error) {
 }
 
 // GetGroupLabelRoles
-// Return group roles.
+// Return group label roles.
 func (client *Client) GetGroupLabelRoles(ctx context.Context, groupName string) ([]Labels, error) {
 	var (
 		groupRoleData GroupRolesAPIData
@@ -370,10 +369,11 @@ func (client *Client) ListAllPermissionScheme(ctx context.Context) (PermissionSc
 	}
 
 	defer resp.Body.Close()
-	// This is the default Permission Scheme. Any new projects that are created will be assigned this scheme.
+	// Default Permission Scheme. New projects created will be assigned this scheme.
 	return permissionSchemesAPIData.PermissionSchemes[0], err
 }
 
+// post and delete requests.
 func getXRequest(ctx context.Context, cli *Client, method, apiUrl string, body BodyActors) (*http.Request, string, error) {
 	var (
 		req     *http.Request
@@ -408,7 +408,7 @@ func getXRequest(ctx context.Context, cli *Client, method, apiUrl string, body B
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/project/{projectIdOrKey}/role-addActorUsers
 func (client *Client) AddActorsProjectRole(ctx context.Context, projectId, roleId string, body BodyActors) (ActorsAPIData, error) {
 	var actorsAPIData ActorsAPIData
-	url := fmt.Sprintf("%s%s/role/%s", allProjects, projectId, roleId)
+	url := fmt.Sprintf("%s/role/%s", allProjects+projectId, roleId)
 	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, url, body)
 	if err != nil {
 		return ActorsAPIData{}, err
@@ -427,7 +427,7 @@ func (client *Client) AddActorsProjectRole(ctx context.Context, projectId, roleI
 // Deletes actors (users or groups) from a project role in the Jira DC.
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/project/{projectIdOrKey}/role-deleteActor
 func (client *Client) RemoveActorsProjectRole(ctx context.Context, projectId, roleId, actor string) (int, error) {
-	url := fmt.Sprintf("%s%s/role/%s?%s", allProjects, projectId, roleId, actor)
+	url := fmt.Sprintf("%s/role/%s?%s", allProjects+projectId, roleId, actor)
 	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, url, BodyActors{})
 	if err != nil {
 		return NF, err
@@ -464,6 +464,8 @@ func (client *Client) AddUserToGroup(ctx context.Context, groupName, userName st
 	return resp.StatusCode, err
 }
 
+// GetUserName
+// Returns user name.
 func (client *Client) GetUserName(ctx context.Context, userId string) (string, error) {
 	users, err := client.ListAllUsers(ctx)
 	if err != nil {
