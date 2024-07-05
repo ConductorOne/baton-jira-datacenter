@@ -261,7 +261,6 @@ func TestProjectBuilderGrantUsers(t *testing.T) {
 }
 
 func TestProjectBuilderRevokeGroup(t *testing.T) {
-
 	if instanceUrl == "" && accessToken == "" {
 		t.Skip()
 	}
