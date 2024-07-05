@@ -45,9 +45,9 @@ jobs:
       BATON_INSTANCE_URL: 'http://localhost:8080'
       BATON_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       # The following parameters are passed to grant/revoke commands
-      CONNECTOR_GRANT: 'group:jira-administrators:Admin:user:JIRAUSER10000'
+      CONNECTOR_GRANT: 'group:jira-administrators:Admin:user:JIRAUSER10102'
       CONNECTOR_ENTITLEMENT: 'group:jira-administrators:Admin'
-      CONNECTOR_PRINCIPAL: 'JIRAUSER10000'
+      CONNECTOR_PRINCIPAL: 'JIRAUSER10102'
       CONNECTOR_PRINCIPAL_TYPE: 'user'
     steps:
       - name: Install Go
