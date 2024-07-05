@@ -211,6 +211,12 @@ func getProjectBuilderForTesting(cli *client.Client) *projectBuilder {
 	}
 }
 
+func getGroupBuilderForTesting(cli *client.Client) *groupBuilder {
+	return &groupBuilder{
+		client: cli,
+	}
+}
+
 func TestProjectBuilderGrant(t *testing.T) {
 	var roleEntitlement string
 	if instanceUrl == "" && accessToken == "" {
@@ -264,8 +270,8 @@ func TestProjectBuilderGrantUsers(t *testing.T) {
 	// --grant-principal-type user
 	// --grant-principal JIRAUSER10103
 	grantEntitlement := "project:10000:Administrators"
-	grantPrincipal := "JIRAUSER10103"
 	grantPrincipalType := "user"
+	grantPrincipal := "JIRAUSER10103"
 	_, data, err := ParseEntitlementID(grantEntitlement)
 	assert.Nil(t, err)
 	assert.NotNil(t, data)
@@ -356,5 +362,73 @@ func TestProjectBuilderRevokeUser(t *testing.T) {
 	annos.Update(v1Identifier)
 	gr.Annotations = annos
 	_, err = projectBuilder.Revoke(ctx, gr)
+	assert.Nil(t, err)
+}
+
+func TestGroupBuilderGrantUser(t *testing.T) {
+	var roleEntitlement string
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	// --grant-entitlement group:jira-administrators:Admin
+	// --grant-principal-type user
+	// --grant-principal JIRAUSER10102
+	grantEntitlement := "group:jira-administrators:Admin"
+	grantPrincipalType := "user"
+	grantPrincipal := "JIRAUSER10102"
+	_, data, err := ParseEntitlementID(grantEntitlement)
+	assert.Nil(t, err)
+	assert.NotNil(t, data)
+	groupId := data[1]
+	roleEntitlement = data[2]
+	userId := grantPrincipal
+	user := getUserForTesting(userId)
+	principal, err := userResource(*user)
+	assert.Nil(t, err)
+	group := getGroupForTesting(groupId)
+	resource, err := groupResource(ctx, *group, nil)
+	assert.Nil(t, err)
+	entitlement := getEntitlementForTesting(resource, grantPrincipalType, roleEntitlement)
+	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	groupBuilder := getGroupBuilderForTesting(cli)
+	_, err = groupBuilder.Grant(ctx, principal, entitlement)
+	assert.Nil(t, err)
+}
+
+func TestGroupBuilderRevokeUser(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	// --revoke-grant group:jira-administrators:Admin:user:JIRAUSER10102
+	revokeGrant := "group:jira-administrators:Admin:user:JIRAUSER10102"
+	_, grantData, err := ParseGrantID(revokeGrant)
+	assert.Nil(t, err)
+	assert.NotNil(t, grantData)
+	grantEntitlement := fmt.Sprintf("%s:%s:%s", grantData[0], grantData[1], grantData[2])
+	grantPrincipal := grantData[4]
+	_, entitlemenData, err := ParseEntitlementID(grantEntitlement)
+	assert.Nil(t, err)
+	assert.NotNil(t, entitlemenData)
+	groupId := entitlemenData[1]
+	roleId := entitlemenData[2]
+	userId := grantPrincipal
+	user := getUserForTesting(userId)
+	principal, err := userResource(*user)
+	assert.Nil(t, err)
+	group := getGroupForTesting(groupId)
+	resource, err := groupResource(ctx, *group, nil)
+	assert.Nil(t, err)
+	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	groupBuilder := getGroupBuilderForTesting(cli)
+	gr := grant.NewGrant(resource, roleId, principal.Id)
+	annos := annotations.Annotations(gr.Annotations)
+	v1Identifier := &v2.V1Identifier{
+		Id: V1GrantID(V1MembershipEntitlementID(groupId), userId),
+	}
+	annos.Update(v1Identifier)
+	gr.Annotations = annos
+	_, err = groupBuilder.Revoke(ctx, gr)
 	assert.Nil(t, err)
 }
