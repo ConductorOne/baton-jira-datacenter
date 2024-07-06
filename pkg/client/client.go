@@ -44,9 +44,11 @@ func (b *JiraError) Error() string {
 // GET - {instanceURL}/rest/api/2/groups/picker?query=.
 // POST - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{id}
 // POST - {instanceURL}/rest/api/2/group/user
+// POST - {instanceURL}/rest/api/2/role/{id}/actors
 // DELETE - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{roleId}?user={username}
 // DELETE - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{roleId}?group={groupname}
 // DELETE - {instanceURL}/rest/api/2/group/user?groupname={groupname}&username={username}
+// DELETE - {instanceURL}/rest/api/2/role/{id}/actors
 
 const (
 	allPermissions      = "rest/api/2/permissions"
@@ -402,11 +404,11 @@ func getXRequest(ctx context.Context, cli *Client, method, apiUrl string, body B
 	return req, endpointUrl, nil
 }
 
-// AddActorsProjectRole
+// AddActorsToProjectRole
 // Adds an actor (user or group) to a project role in the Jira DC.
 // For user actors, their usernames should be used.
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/project/{projectIdOrKey}/role-addActorUsers
-func (client *Client) AddActorsProjectRole(ctx context.Context, projectId, roleId string, body BodyActors) (ActorsAPIData, error) {
+func (client *Client) AddActorsToProjectRole(ctx context.Context, projectId, roleId string, body BodyActors) (ActorsAPIData, error) {
 	var actorsAPIData ActorsAPIData
 	url := fmt.Sprintf("%s/role/%s", allProjects+projectId, roleId)
 	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, url, body)
@@ -426,7 +428,7 @@ func (client *Client) AddActorsProjectRole(ctx context.Context, projectId, roleI
 // RemoveActorsProjectRole
 // Deletes actors (users or groups) from a project role in the Jira DC.
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/project/{projectIdOrKey}/role-deleteActor
-func (client *Client) RemoveActorsProjectRole(ctx context.Context, projectId, roleId, actor string) (int, error) {
+func (client *Client) RemoveActorsFromProjectRole(ctx context.Context, projectId, roleId, actor string) (int, error) {
 	url := fmt.Sprintf("%s/role/%s?%s", allProjects+projectId, roleId, actor)
 	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, url, BodyActors{})
 	if err != nil {
@@ -488,6 +490,45 @@ func (client *Client) GetUserName(ctx context.Context, userId string) (string, e
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/group-removeUserFromGroup
 func (client *Client) RemoveUserFromGroup(ctx context.Context, groupName, userName string) (int, error) {
 	url := addUserToGroup + "?groupname=" + groupName + "&username=" + userName
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, url, BodyActors{})
+	if err != nil {
+		return NF, err
+	}
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return NF, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return resp.StatusCode, err
+}
+
+// AddProjectRoleActorsToRole
+// Adds default actors to the given role. The request data should contain a list of usernames or a list of groups to add.
+// https://docs.atlassian.com/software/jira/docs/api/REST/7.6.1/#api/2/role-addProjectRoleActorsToRole
+func (client *Client) AddProjectRoleActorsToRole(ctx context.Context, roleId string, body BodyActors) (ActorsAPIData, error) {
+	var actorsAPIData ActorsAPIData
+	url := fmt.Sprintf("%s/%s/actors", allRoles, roleId)
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, url, body)
+	if err != nil {
+		return ActorsAPIData{}, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&actorsAPIData))
+	if err != nil {
+		return ActorsAPIData{}, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return actorsAPIData, err
+}
+
+// DeleteProjectRoleActorsFromRole
+// Removes default actor from the given role.
+// https://docs.atlassian.com/software/jira/docs/api/REST/7.6.1/#api/2/role-deleteProjectRoleActorsFromRole
+func (client *Client) DeleteProjectRoleActorsFromRole(ctx context.Context, roleId, actor string) (int, error) {
+	url := fmt.Sprintf("%s/%s/actors?%s", allRoles, roleId, actor)
 	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, url, BodyActors{})
 	if err != nil {
 		return NF, err
