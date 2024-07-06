@@ -194,7 +194,6 @@ func (r *roleBuilder) Grant(ctx context.Context, principal *v2.Resource, entitle
 		actorPos := slices.IndexFunc(actors.Actors, func(c client.Actors) bool {
 			return c.Name == userName
 		})
-
 		if actorPos != NF {
 			l.Warn("Role Membership has been created.",
 				zap.String("Name", actors.Actors[actorPos].Name),
@@ -219,7 +218,6 @@ func (r *roleBuilder) Grant(ctx context.Context, principal *v2.Resource, entitle
 		actorPos := slices.IndexFunc(actors.Actors, func(c client.Actors) bool {
 			return c.Name == groupName
 		})
-
 		if actorPos != NF {
 			l.Warn("Role Membership has been created.",
 				zap.String("Name", actors.Actors[actorPos].Name),

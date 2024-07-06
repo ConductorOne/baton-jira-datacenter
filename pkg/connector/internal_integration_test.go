@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
@@ -17,11 +18,12 @@ import (
 )
 
 var (
-	ctx              = context.Background()
-	instanceUrl, _   = os.LookupEnv("BATON_INSTANCE_URL")
-	accessToken, _   = os.LookupEnv("BATON_ACCESS_TOKEN")
-	parentResourceID = &v2.ResourceId{}
-	pToken           = &pagination.Token{}
+	ctx                    = context.Background()
+	instanceUrl, _         = os.LookupEnv("BATON_INSTANCE_URL")
+	accessToken, _         = os.LookupEnv("BATON_ACCESS_TOKEN")
+	parentResourceID       = &v2.ResourceId{}
+	pToken                 = &pagination.Token{}
+	grantPrincipalTypeUser = "user"
 )
 
 func TestGroupBuilderList(t *testing.T) {
@@ -236,7 +238,7 @@ func TestProjectBuilderGrantUsers(t *testing.T) {
 	// --grant-principal-type user
 	// --grant-principal JIRAUSER10103
 	grantEntitlement := "project:10000:Administrators"
-	grantPrincipalType := "user"
+	grantPrincipalType := grantPrincipalTypeUser
 	grantPrincipal := "JIRAUSER10103"
 	_, data, err := ParseEntitlementID(grantEntitlement)
 	assert.Nil(t, err)
@@ -429,8 +431,25 @@ func getProjectForTesting(projectId string) *jira.Project {
 	}
 }
 
+func getRoleForTesting(role string) *client.RolesAPIData {
+	roleId, err := strconv.Atoi(role)
+	if err != nil {
+		return nil
+	}
+
+	return &client.RolesAPIData{
+		ID: roleId,
+	}
+}
+
 func getProjectBuilderForTesting(cli *client.Client) *projectBuilder {
 	return &projectBuilder{
+		client: cli,
+	}
+}
+
+func getRoleBuilderForTesting(cli *client.Client) *roleBuilder {
+	return &roleBuilder{
 		client: cli,
 	}
 }
@@ -455,4 +474,154 @@ func getEntitlementForTesting(resource *v2.Resource, resourceDisplayName, roleEn
 	}
 
 	return ent.NewAssignmentEntitlement(resource, roleEntitlement, options...)
+}
+
+func TestRoleBuilderGrantGroup(t *testing.T) {
+	var roleEntitlement string
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	// --grant-entitlement role:10002:Administrators
+	// --grant-principal-type group
+	// --grant-principal jira-software-users
+	grantEntitlement := "role:10002:Administrators"
+	grantPrincipalType := "group"
+	grantPrincipal := "jira-software-users"
+	_, data, err := ParseEntitlementID(grantEntitlement)
+	assert.Nil(t, err)
+	assert.NotNil(t, data)
+
+	roleId := data[1]
+	roleEntitlement = data[2]
+	groupName := grantPrincipal
+	group := getGroupForTesting(groupName)
+	principal, err := groupResource(ctx, *group, nil)
+	assert.Nil(t, err)
+
+	role := getRoleForTesting(roleId)
+	resource, err := roleResource(ctx, *role, nil)
+	assert.Nil(t, err)
+
+	entitlement := getEntitlementForTesting(resource, grantPrincipalType, roleEntitlement)
+	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	roleBuilder := getRoleBuilderForTesting(cli)
+	_, err = roleBuilder.Grant(ctx, principal, entitlement)
+	assert.Nil(t, err)
+}
+
+func TestRoleBuilderGrantUsers(t *testing.T) {
+	var roleEntitlement string
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	// --grant-entitlement role:10002:Administrators
+	// --grant-principal-type user
+	// --grant-principal JIRAUSER10102
+	grantEntitlement := "role:10002:Administrators"
+	grantPrincipalType := "user"
+	grantPrincipal := "JIRAUSER10102"
+	_, data, err := ParseEntitlementID(grantEntitlement)
+	assert.Nil(t, err)
+	assert.NotNil(t, data)
+
+	projectId := data[1]
+	roleEntitlement = data[2]
+	userId := grantPrincipal
+	user := getUserForTesting(userId)
+	principal, err := userResource(*user)
+	assert.Nil(t, err)
+
+	role := getRoleForTesting(projectId)
+	resource, err := roleResource(ctx, *role, nil)
+	assert.Nil(t, err)
+
+	entitlement := getEntitlementForTesting(resource, grantPrincipalType, roleEntitlement)
+	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	roleBuilder := getRoleBuilderForTesting(cli)
+	_, err = roleBuilder.Grant(ctx, principal, entitlement)
+	assert.Nil(t, err)
+}
+
+func TestRoleBuilderRevokeGroup(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	// --revoke-grant role:10002:Administrators:group:jira-software-users
+	revokeGrant := "role:10002:Administrators:group:jira-software-users"
+	_, grantData, err := ParseGrantID(revokeGrant)
+	assert.Nil(t, err)
+	assert.NotNil(t, grantData)
+
+	grantEntitlement := fmt.Sprintf("%s:%s:%s", grantData[0], grantData[1], grantData[2])
+	grantPrincipal := grantData[4]
+	_, entitlemenData, err := ParseEntitlementID(grantEntitlement)
+	assert.Nil(t, err)
+	assert.NotNil(t, entitlemenData)
+
+	projectId := entitlemenData[1]
+	roleId := entitlemenData[2]
+	groupName := grantPrincipal
+	group := getGroupForTesting(groupName)
+	principal, err := groupResource(ctx, *group, nil)
+	assert.Nil(t, err)
+
+	role := getRoleForTesting(projectId)
+	resource, err := roleResource(ctx, *role, nil)
+	assert.Nil(t, err)
+
+	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	roleBuilder := getRoleBuilderForTesting(cli)
+	gr := grant.NewGrant(resource, roleId, principal.Id)
+	annos := annotations.Annotations(gr.Annotations)
+	v1Identifier := &v2.V1Identifier{
+		Id: V1GrantID(V1MembershipEntitlementID(projectId), groupName),
+	}
+	annos.Update(v1Identifier)
+	gr.Annotations = annos
+	_, err = roleBuilder.Revoke(ctx, gr)
+	assert.Nil(t, err)
+}
+
+func TestRoleBuilderRevokeUser(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	// --revoke-grant role:10002:Administrators:user:JIRAUSER10102
+	revokeGrant := "role:10002:Administrators:user:JIRAUSER10102"
+	_, grantData, err := ParseGrantID(revokeGrant)
+	assert.Nil(t, err)
+	assert.NotNil(t, grantData)
+
+	grantEntitlement := fmt.Sprintf("%s:%s:%s", grantData[0], grantData[1], grantData[2])
+	grantPrincipal := grantData[4]
+	_, entitlemenData, err := ParseEntitlementID(grantEntitlement)
+	assert.Nil(t, err)
+	assert.NotNil(t, entitlemenData)
+
+	projectId := entitlemenData[1]
+	roleId := entitlemenData[2]
+	userId := grantPrincipal
+	user := getUserForTesting(userId)
+	principal, err := userResource(*user)
+	assert.Nil(t, err)
+
+	role := getRoleForTesting(projectId)
+	resource, err := roleResource(ctx, *role, nil)
+	assert.Nil(t, err)
+
+	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	roleBuilder := getRoleBuilderForTesting(cli)
+	gr := grant.NewGrant(resource, roleId, principal.Id)
+	annos := annotations.Annotations(gr.Annotations)
+	v1Identifier := &v2.V1Identifier{
+		Id: V1GrantID(V1MembershipEntitlementID(projectId), userId),
+	}
+	annos.Update(v1Identifier)
+	gr.Annotations = annos
+	_, err = roleBuilder.Revoke(ctx, gr)
+	assert.Nil(t, err)
 }
