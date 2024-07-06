@@ -102,7 +102,8 @@ func (r *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _
 
 func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	var rv []*v2.Grant
-	projectRoles, err := r.client.ListAllRoles(ctx)
+	// List roles in general
+	roles, err := r.client.ListAllRoles(ctx)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -112,12 +113,12 @@ func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 		return nil, "", nil, err
 	}
 
-	for _, member := range projectRoles {
-		if roleId != member.ID {
+	for _, role := range roles {
+		if roleId != role.ID {
 			continue
 		}
-
-		for _, actor := range member.Actors {
+		// An actor can be (users or groups)
+		for _, actor := range role.Actors {
 			switch actor.Type {
 			case userRole:
 				user, err := r.client.GetUser(ctx, actor.Name)
@@ -130,7 +131,7 @@ func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 					return nil, "", nil, err
 				}
 
-				membershipGrant := grant.NewGrant(resource, member.Name, ur.Id)
+				membershipGrant := grant.NewGrant(resource, role.Name, ur.Id)
 				rv = append(rv, membershipGrant)
 			case groupRole:
 				group := client.Group{
@@ -141,7 +142,7 @@ func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 					return nil, "", nil, err
 				}
 
-				membershipGrant := grant.NewGrant(resource, member.Name, gr.Id)
+				membershipGrant := grant.NewGrant(resource, role.Name, gr.Id)
 				rv = append(rv, membershipGrant)
 			default:
 				return nil, "", nil, fmt.Errorf("jira(dc)-connector: invalid member resource type: %s", actor.Type)
