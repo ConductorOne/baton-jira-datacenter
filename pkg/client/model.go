@@ -136,7 +136,3 @@ type ActorsAPIData struct {
 	Description string   `json:"description,omitempty"`
 	Actors      []Actors `json:"actors,omitempty"`
 }
-
-type Body struct {
-	Name string `json:"name,omitempty"`
-}

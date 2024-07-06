@@ -27,9 +27,6 @@ func main() {
 	}
 
 	cmd.Version = version
-
-	cmdFlags(cmd)
-
 	err = cmd.Execute()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
