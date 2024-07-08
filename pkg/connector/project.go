@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
@@ -11,6 +12,9 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	sdkResource "github.com/conductorone/baton-sdk/pkg/types/resource"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
@@ -119,13 +123,8 @@ func (p *projectBuilder) Grants(ctx context.Context, resource *v2.Resource, pTok
 		if err != nil {
 			return nil, "", nil, err
 		}
-		// Getting actors from role
-		roleDetails, err := p.client.GetRole(ctx, strconv.Itoa(role.ID))
-		if err != nil {
-			return nil, "", nil, err
-		}
 
-		for _, actor := range roleDetails.Actors {
+		for _, actor := range role.Actors {
 			switch actor.Type {
 			case userRole:
 				user, err := p.client.GetUser(ctx, actor.Name)
@@ -164,6 +163,181 @@ func (p *projectBuilder) Grants(ctx context.Context, resource *v2.Resource, pTok
 	}
 
 	return rv, "", nil, nil
+}
+
+func (p *projectBuilder) Grant(ctx context.Context, principal *v2.Resource, entitlement *v2.Entitlement) (annotations.Annotations, error) {
+	var roleId string
+	l := ctxzap.Extract(ctx)
+	if principal.Id.ResourceType != userResourceType.Id && principal.Id.ResourceType != groupResourceType.Id {
+		l.Warn(
+			"jira(dc)-connector: only users or groups can be granted role memberships",
+			zap.String("principal_type", principal.Id.ResourceType),
+			zap.String("principal_id", principal.Id.Resource),
+		)
+		return nil, fmt.Errorf("jira(dc)-connector: only users or groups can be granted role memberships")
+	}
+
+	_, entitlementID, err := ParseEntitlementID(entitlement.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	roles, err := p.client.ListAllRoles(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	roleName := entitlementID[2]
+	rolePos := slices.IndexFunc(roles, func(c client.RolesAPIData) bool {
+		return c.Name == roleName
+	})
+
+	if rolePos == NF {
+		return nil, fmt.Errorf("role %s cannot be found", roleName)
+	}
+
+	projectId := entitlement.Resource.Id.Resource
+	roleId = strconv.Itoa(roles[rolePos].ID)
+	switch principal.Id.ResourceType {
+	case userResourceType.Id:
+		userId := principal.Id.Resource
+		userName, err := p.client.GetUserName(ctx, userId)
+		if err != nil {
+			return nil, err
+		}
+
+		body := client.BodyActors{
+			User: []string{
+				userName,
+			},
+		}
+		actors, err := p.client.AddActorsToProjectRole(ctx, projectId, roleId, body)
+		err = getError(err)
+		if err != nil {
+			return nil, err
+		}
+
+		actorPos := slices.IndexFunc(actors.Actors, func(c client.Actors) bool {
+			return c.Name == userName
+		})
+
+		if actorPos != NF {
+			l.Warn("Project Membership has been created.",
+				zap.String("Name", actors.Actors[actorPos].Name),
+				zap.String("DisplayName", actors.Actors[actorPos].DisplayName),
+				zap.String("Type", actors.Actors[actorPos].Type),
+				zap.Int("ID", actors.Actors[actorPos].ID),
+			)
+		}
+	case groupResourceType.Id:
+		groupName := principal.Id.Resource
+		body := client.BodyActors{
+			Group: []string{
+				groupName,
+			},
+		}
+		actors, err := p.client.AddActorsToProjectRole(ctx, projectId, roleId, body)
+		err = getError(err)
+		if err != nil {
+			return nil, err
+		}
+
+		actorPos := slices.IndexFunc(actors.Actors, func(c client.Actors) bool {
+			return c.Name == groupName
+		})
+
+		if actorPos != NF {
+			l.Warn("Project Membership has been created.",
+				zap.String("Name", actors.Actors[actorPos].Name),
+				zap.String("DisplayName", actors.Actors[actorPos].DisplayName),
+				zap.String("Type", actors.Actors[actorPos].Type),
+				zap.Int("ID", actors.Actors[actorPos].ID),
+			)
+		}
+	default:
+		return nil, fmt.Errorf("jira(dc)-connector: invalid grant resource type: %s", principal.Id.ResourceType)
+	}
+
+	return nil, nil
+}
+
+func (p *projectBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+	principal := grant.Principal
+	entitlement := grant.Entitlement
+	if principal.Id.ResourceType != userResourceType.Id &&
+		principal.Id.ResourceType != groupResourceType.Id {
+		l.Warn(
+			"jira(dc)-connector: only users or groups can have role membership revoked",
+			zap.String("principal_id", principal.Id.String()),
+			zap.String("principal_type", principal.Id.ResourceType),
+		)
+
+		return nil, fmt.Errorf("jira(dc)-connector: only users or groups can have role membership revoked")
+	}
+
+	projectResourceId, permissions, err := ParseEntitlementID(entitlement.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	projectId := projectResourceId.Resource
+	roles, err := p.client.ListAllRoles(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	roleName := permissions[2]
+	rolePos := slices.IndexFunc(roles, func(c client.RolesAPIData) bool {
+		return c.Name == roleName
+	})
+
+	if rolePos == NF {
+		return nil, fmt.Errorf("role %s cannot be found", roleName)
+	}
+
+	roleId := strconv.Itoa(roles[rolePos].ID)
+	switch principal.Id.ResourceType {
+	case userResourceType.Id:
+		userId := principal.Id.Resource
+		userName, err := p.client.GetUserName(ctx, userId)
+		if err != nil {
+			return nil, err
+		}
+
+		statusCode, err := p.client.RemoveActorsFromProjectRole(ctx, projectId, roleId, "user="+userName)
+		err = getError(err)
+		if err != nil {
+			return nil, err
+		}
+
+		if statusCode == http.StatusNoContent {
+			l.Warn("Project Membership has been revoked.",
+				zap.String("userName", userName),
+				zap.String("ProjectId", projectId),
+				zap.String("RoleId", roleId),
+			)
+		}
+	case groupResourceType.Id:
+		groupName := principal.Id.Resource
+		statusCode, err := p.client.RemoveActorsFromProjectRole(ctx, projectId, roleId, "group="+groupName)
+		err = getError(err)
+		if err != nil {
+			return nil, err
+		}
+
+		if statusCode == http.StatusNoContent {
+			l.Warn("Project Membership has been revoked.",
+				zap.String("GroupName", groupName),
+				zap.String("ProjectId", projectId),
+				zap.String("RoleId", roleId),
+			)
+		}
+	default:
+		return nil, fmt.Errorf("jira(dc) connector: invalid grant resource type: %s", principal.Id.ResourceType)
+	}
+
+	return nil, nil
 }
 
 func newProjectBuilder(client *client.Client) *projectBuilder {

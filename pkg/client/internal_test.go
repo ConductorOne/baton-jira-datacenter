@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"testing"
 
@@ -205,4 +206,126 @@ func TestClientListAllPermissionScheme(t *testing.T) {
 	roles, err := client.ListAllPermissionScheme(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
+}
+
+func TestClientAddActorsToProjectRole(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	body := BodyActors{
+		Group: []string{
+			"jira-software-users",
+		},
+	}
+	roles, err := client.AddActorsToProjectRole(ctx, "10000", "10002", body)
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+}
+
+func TestClientRemoveActorsFromProjectRole(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	statusCode, err := client.RemoveActorsFromProjectRole(ctx, "10000", "10002", "group=jira-administrators")
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusNoContent, statusCode)
+}
+
+func TestClientAddUserToGroupFails(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	userName, err := client.GetUserName(ctx, "JIRAUSER10103")
+	assert.Nil(t, err)
+
+	_, err = client.AddUserToGroup(ctx, "jira-software-users", userName)
+	assert.NotNil(t, err)
+}
+
+func TestClientAddUserToGroup(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	userName, err := client.GetUserName(ctx, "JIRAUSER10103")
+	assert.Nil(t, err)
+
+	statusCode, err := client.AddUserToGroup(ctx, "jira-administrators", userName)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, statusCode)
+}
+
+func TestClientRemoveUserFromGroup(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	userName, err := client.GetUserName(ctx, "JIRAUSER10103")
+	assert.Nil(t, err)
+
+	statusCode, err := client.RemoveUserFromGroup(ctx, "jira-administrators", userName)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, statusCode)
+}
+
+func TestClientAddProjectRoleActorsToRoleWithGroup(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	body := BodyActors{
+		Group: []string{
+			"jira-software-users",
+		},
+	}
+	roles, err := client.AddProjectRoleActorsToRole(ctx, "10002", body)
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+}
+
+func TestClientAddProjectRoleActorsToRoleWithUser(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	body := BodyActors{
+		User: []string{
+			"JIRAUSER10103",
+		},
+	}
+	roles, err := client.AddProjectRoleActorsToRole(ctx, "10002", body)
+	assert.Nil(t, err)
+	assert.NotNil(t, roles)
+}
+
+func TestClientDeleteProjectRoleActorsFromRoleWithGroup(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	statusCode, err := client.DeleteProjectRoleActorsFromRole(ctx, "10002", "group=jira-software-users")
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, statusCode)
+}
+
+func TestClientDeleteProjectRoleActorsFromRoleWithUser(t *testing.T) {
+	if instanceUrl == "" && accessToken == "" {
+		t.Skip()
+	}
+
+	client, _ := New(ctx, instanceUrl, accessToken)
+	statusCode, err := client.DeleteProjectRoleActorsFromRole(ctx, "10002", "user=JIRAUSER10102")
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, statusCode)
 }

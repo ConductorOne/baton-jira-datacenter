@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
@@ -10,6 +11,8 @@ import (
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	sdkResource "github.com/conductorone/baton-sdk/pkg/types/resource"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"go.uber.org/zap"
 
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 )
@@ -131,6 +134,89 @@ func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 	return rv, "", nil, nil
 }
 
+func (g *groupBuilder) Grant(ctx context.Context, principal *v2.Resource, entitlement *v2.Entitlement) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+	if principal.Id.ResourceType != userResourceType.Id {
+		l.Warn(
+			"jira(dc)-connector: only users can be granted role memberships",
+			zap.String("principal_type", principal.Id.ResourceType),
+			zap.String("principal_id", principal.Id.Resource),
+		)
+		return nil, fmt.Errorf("jira(dc)-connector: only users can be granted role memberships")
+	}
+
+	_, _, err := ParseEntitlementID(entitlement.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	groupId := entitlement.Resource.Id.Resource
+	userId := principal.Id.Resource
+	userName, err := g.client.GetUserName(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	statusCode, err := g.client.AddUserToGroup(ctx, groupId, userName)
+	err = getError(err)
+	if err != nil {
+		return nil, err
+	}
+
+	if statusCode == http.StatusCreated {
+		l.Warn("Group Membership has been created.",
+			zap.String("userId", userId),
+			zap.String("userName", userName),
+			zap.String("group", groupId),
+		)
+	}
+
+	return nil, nil
+}
+
+func (g *groupBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+	principal := grant.Principal
+	entitlement := grant.Entitlement
+	if principal.Id.ResourceType != userResourceType.Id &&
+		principal.Id.ResourceType != groupResourceType.Id {
+		l.Warn(
+			"jira(dc)-connector: only users can have role membership revoked",
+			zap.String("principal_id", principal.Id.String()),
+			zap.String("principal_type", principal.Id.ResourceType),
+		)
+
+		return nil, fmt.Errorf("jira(dc)-connector: only users can have role membership revoked")
+	}
+
+	projectResourceId, _, err := ParseEntitlementID(entitlement.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	groupId := projectResourceId.Resource
+	userId := principal.Id.Resource
+	userName, err := g.client.GetUserName(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	statusCode, err := g.client.RemoveUserFromGroup(ctx, groupId, userName)
+	err = getError(err)
+	if err != nil {
+		return nil, err
+	}
+
+	if statusCode == http.StatusOK {
+		l.Warn("Group Membership has been revoked.",
+			zap.String("groupId", groupId),
+			zap.String("userId", userId),
+			zap.String("userName", userName),
+		)
+	}
+
+	return nil, nil
+}
 func newGroupBuilder(client *client.Client) *groupBuilder {
 	return &groupBuilder{
 		client: client,

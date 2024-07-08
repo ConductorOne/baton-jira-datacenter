@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
@@ -40,7 +41,15 @@ func (b *JiraError) Error() string {
 // GET - {instanceURL}/rest/api/2/role
 // GET - {instanceURL}/rest/api/2/project
 // GET - {instanceURL}/rest/api/2/groups/picker
-// GET /jira/rest/api/2/groups/picker?query=.
+// GET - {instanceURL}/rest/api/2/groups/picker?query=.
+// POST - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{id}
+// POST - {instanceURL}/rest/api/2/group/user
+// POST - {instanceURL}/rest/api/2/role/{id}/actors
+// DELETE - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{roleId}?user={username}
+// DELETE - {instanceURL}/rest/api/2/project/{projectIdOrKey}/role/{roleId}?group={groupname}
+// DELETE - {instanceURL}/rest/api/2/group/user?groupname={groupname}&username={username}
+// DELETE - {instanceURL}/rest/api/2/role/{id}/actors
+
 const (
 	allPermissions      = "rest/api/2/permissions"
 	allUsersV2          = "rest/api/2/user/search?username="
@@ -52,19 +61,12 @@ const (
 	groupRoles          = "rest/api/2/groups/picker"
 	groupRolesQuery     = "rest/api/2/groups/picker?query="
 	allPermissionScheme = "rest/api/2/permissionscheme?expand=permissions"
+	addUserToGroup      = "rest/api/2/group/user"
+	NF                  = -1
 )
-
-func NewClient() *Client {
-	return &Client{
-		BaseURL:    "http://localhost:8088",
-		client:     &jira.Client{},
-		httpClient: &uhttp.BaseHttpClient{},
-	}
-}
 
 func New(ctx context.Context, instanceURL, accessToken string) (*Client, error) {
 	l := ctxzap.Extract(ctx)
-
 	httpClient, err := uhttp.NewBearerAuth(accessToken).GetClient(ctx)
 	if err != nil {
 		l.Error("error creating http client", zap.Error(err))
@@ -128,7 +130,7 @@ func getCustomError(err error, resp *http.Response, endpointUrl string) *JiraErr
 }
 
 // ListAllPermissions
-// Returns all permissions that are present in the Jira instance - Global, Project and the global ones added by plugins
+// Returns all permissions that are present in the Jira instance
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2-getAllPermissions
 func (client *Client) ListAllPermissions(ctx context.Context) ([]Permission, error) {
 	var permissionsData PermissionsAPIData
@@ -157,7 +159,7 @@ func (client *Client) ListAllPermissions(ctx context.Context) ([]Permission, err
 }
 
 // ListAllUsers
-// Returns all users that are present in the Jira instance - Global, Project and the global ones added by plugins.
+// Returns all users that are present in the Jira instance.
 func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
 	var usersData []jira.User
 	req, endpointUrl, err := getRequest(ctx, client, allUsers)
@@ -175,7 +177,7 @@ func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
 }
 
 // ListAllGroups
-// Returns all groups that are present in the Jira instance - Global, Project and the global ones added by plugins.
+// Returns all groups that are present in the Jira instance.
 func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 	var groupsData GroupsAPIData
 	req, endpointUrl, err := getRequest(ctx, client, allGroups)
@@ -193,7 +195,7 @@ func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 }
 
 // GetGroupMembers
-// Returns all group members that are present in specific groups.
+// Returns all members that are present in a group.
 func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]GroupUser, error) {
 	var groupMembersAPIData GroupMembersAPIData
 	req, endpointUrl, err := getRequest(ctx, client, groupMembers+groupName)
@@ -211,7 +213,7 @@ func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]
 }
 
 // ListAllRoles
-// Returns all roles that are present in the Jira instance - Global, Project and the global ones added by plugins.
+// Returns all roles that are present in the Jira instance.
 func (client *Client) ListAllRoles(ctx context.Context) ([]RolesAPIData, error) {
 	var rolesData []RolesAPIData
 	req, endpointUrl, err := getRequest(ctx, client, allRoles)
@@ -258,7 +260,7 @@ func (client *Client) GetUser(ctx context.Context, userName string) (jira.User, 
 }
 
 // GetProjectRoles
-// Returns all project roles that are present in specific project.
+// Returns all roles that are present in specific project.
 func (client *Client) GetProjectRoles(ctx context.Context, projectId string) (map[string]string, error) {
 	var projectRolesAPIData map[string]string
 	req, endpointUrl, err := getRequest(ctx, client, allProjects+projectId+"/role")
@@ -312,7 +314,7 @@ func (client *Client) GetRole(ctx context.Context, roleId string) (RolesAPIData,
 }
 
 // GetGroupRole
-// Return specific all group roles.
+// Return all group roles.
 func (client *Client) GetGroupRole(ctx context.Context) ([]Group, error) {
 	var groupRolesData GroupRolesAPIData
 	req, endpointUrl, err := getRequest(ctx, client, groupRoles)
@@ -330,7 +332,7 @@ func (client *Client) GetGroupRole(ctx context.Context) ([]Group, error) {
 }
 
 // GetGroupLabelRoles
-// Return group roles.
+// Return group label roles.
 func (client *Client) GetGroupLabelRoles(ctx context.Context, groupName string) ([]Labels, error) {
 	var (
 		groupRoleData GroupRolesAPIData
@@ -369,6 +371,174 @@ func (client *Client) ListAllPermissionScheme(ctx context.Context) (PermissionSc
 	}
 
 	defer resp.Body.Close()
-	// This is the default Permission Scheme. Any new projects that are created will be assigned this scheme.
+	// Default Permission Scheme. New projects created will be assigned this scheme.
 	return permissionSchemesAPIData.PermissionSchemes[0], err
+}
+
+// post and delete requests.
+func getXRequest(ctx context.Context, cli *Client, method, apiUrl string, body BodyActors) (*http.Request, string, error) {
+	var (
+		req     *http.Request
+		options []uhttp.RequestOption
+	)
+	endpointUrl := fmt.Sprintf("%s/%s", cli.BaseURL, apiUrl)
+	uri, err := url.Parse(endpointUrl)
+	if err != nil {
+		return nil, "", err
+	}
+
+	options = append(options, uhttp.WithAcceptJSONHeader())
+	if method != http.MethodDelete {
+		options = append(options, uhttp.WithJSONBody(body))
+	}
+
+	req, err = cli.httpClient.NewRequest(ctx,
+		method,
+		uri,
+		options...,
+	)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return req, endpointUrl, nil
+}
+
+// AddActorsToProjectRole
+// Adds an actor (user or group) to a project role in the Jira DC.
+// For user actors, their usernames should be used.
+// https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/project/{projectIdOrKey}/role-addActorUsers
+func (client *Client) AddActorsToProjectRole(ctx context.Context, projectId, roleId string, body BodyActors) (ActorsAPIData, error) {
+	var actorsAPIData ActorsAPIData
+	url := fmt.Sprintf("%s/role/%s", allProjects+projectId, roleId)
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, url, body)
+	if err != nil {
+		return ActorsAPIData{}, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&actorsAPIData))
+	if err != nil {
+		return ActorsAPIData{}, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return actorsAPIData, err
+}
+
+// RemoveActorsProjectRole
+// Deletes actors (users or groups) from a project role in the Jira DC.
+// https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/project/{projectIdOrKey}/role-deleteActor
+func (client *Client) RemoveActorsFromProjectRole(ctx context.Context, projectId, roleId, actor string) (int, error) {
+	url := fmt.Sprintf("%s/role/%s?%s", allProjects+projectId, roleId, actor)
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, url, BodyActors{})
+	if err != nil {
+		return NF, err
+	}
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return NF, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return resp.StatusCode, err
+}
+
+// AddUserToGroup
+// Adds given user to a group in the Jira DC.
+// Returns the current state of the group.
+// https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/group-addUserToGroup
+func (client *Client) AddUserToGroup(ctx context.Context, groupName, userName string) (int, error) {
+	url := addUserToGroup + "?groupname=" + groupName
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, url, BodyActors{
+		Name: userName,
+	})
+	if err != nil {
+		return NF, err
+	}
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return NF, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return resp.StatusCode, err
+}
+
+// GetUserName
+// Returns user name.
+func (client *Client) GetUserName(ctx context.Context, userId string) (string, error) {
+	users, err := client.ListAllUsers(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	userPos := slices.IndexFunc(users, func(c jira.User) bool {
+		return c.Key == userId
+	})
+
+	if userPos == NF {
+		return "", fmt.Errorf("user %s cannot be found", userId)
+	}
+
+	return users[userPos].Name, nil
+}
+
+// RemoveUserFromGroup
+// Removes given user from a group in the Jira DC.
+// https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/group-removeUserFromGroup
+func (client *Client) RemoveUserFromGroup(ctx context.Context, groupName, userName string) (int, error) {
+	url := addUserToGroup + "?groupname=" + groupName + "&username=" + userName
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, url, BodyActors{})
+	if err != nil {
+		return NF, err
+	}
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return NF, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return resp.StatusCode, err
+}
+
+// AddProjectRoleActorsToRole
+// Adds default actors to the given role. The request data should contain a list of usernames or a list of groups to add.
+// https://docs.atlassian.com/software/jira/docs/api/REST/7.6.1/#api/2/role-addProjectRoleActorsToRole
+func (client *Client) AddProjectRoleActorsToRole(ctx context.Context, roleId string, body BodyActors) (ActorsAPIData, error) {
+	var actorsAPIData ActorsAPIData
+	url := fmt.Sprintf("%s/%s/actors", allRoles, roleId)
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, url, body)
+	if err != nil {
+		return ActorsAPIData{}, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&actorsAPIData))
+	if err != nil {
+		return ActorsAPIData{}, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return actorsAPIData, err
+}
+
+// DeleteProjectRoleActorsFromRole
+// Removes default actor from the given role.
+// https://docs.atlassian.com/software/jira/docs/api/REST/7.6.1/#api/2/role-deleteProjectRoleActorsFromRole
+func (client *Client) DeleteProjectRoleActorsFromRole(ctx context.Context, roleId, actor string) (int, error) {
+	url := fmt.Sprintf("%s/%s/actors?%s", allRoles, roleId, actor)
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, url, BodyActors{})
+	if err != nil {
+		return NF, err
+	}
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return NF, getCustomError(err, resp, endpointUrl)
+	}
+
+	defer resp.Body.Close()
+	return resp.StatusCode, err
 }
