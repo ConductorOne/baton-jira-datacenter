@@ -4,7 +4,7 @@ go 1.22.2
 
 require (
 	github.com/andygrunwald/go-jira/v2 v2.0.0-20240419124508-6752705de4c7
-	github.com/conductorone/baton-sdk v0.1.39-0.20240530205352-74438ef2cb4b
+	github.com/conductorone/baton-sdk v0.1.47
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/spf13/cobra v1.8.0
 	go.uber.org/zap v1.27.0
@@ -13,7 +13,10 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	go.opentelemetry.io/otel v1.27.0 // indirect
+	go.opentelemetry.io/otel/metric v1.27.0 // indirect
 )
 
 require (
