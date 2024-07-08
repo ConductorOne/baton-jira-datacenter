@@ -305,7 +305,7 @@ func (p *projectBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotatio
 			return nil, err
 		}
 
-		statusCode, err := p.client.RemoveActorsFromProjectRole(ctx, projectId, roleId, "user="+userName)
+		statusCode, err := p.client.RemoveActorsFromProjectRole(ctx, projectId, roleId, "user", userName)
 		err = getError(err)
 		if err != nil {
 			return nil, err
@@ -320,7 +320,7 @@ func (p *projectBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotatio
 		}
 	case groupResourceType.Id:
 		groupName := principal.Id.Resource
-		statusCode, err := p.client.RemoveActorsFromProjectRole(ctx, projectId, roleId, "group="+groupName)
+		statusCode, err := p.client.RemoveActorsFromProjectRole(ctx, projectId, roleId, "group", groupName)
 		err = getError(err)
 		if err != nil {
 			return nil, err

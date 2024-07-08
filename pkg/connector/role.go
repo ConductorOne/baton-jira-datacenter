@@ -262,7 +262,7 @@ func (r *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.
 			return nil, err
 		}
 
-		statusCode, err := r.client.DeleteProjectRoleActorsFromRole(ctx, roleId, "user="+userId)
+		statusCode, err := r.client.DeleteProjectRoleActorsFromRole(ctx, roleId, "user", userId)
 		err = getError(err)
 		if err != nil {
 			return nil, err
@@ -277,7 +277,7 @@ func (r *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.
 		}
 	case groupResourceType.Id:
 		groupName := principal.Id.Resource
-		statusCode, err := r.client.DeleteProjectRoleActorsFromRole(ctx, roleId, "group="+groupName)
+		statusCode, err := r.client.DeleteProjectRoleActorsFromRole(ctx, roleId, "group", groupName)
 		err = getError(err)
 		if err != nil {
 			return nil, err
