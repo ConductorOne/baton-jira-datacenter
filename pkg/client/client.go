@@ -56,12 +56,10 @@ const (
 	allPermissions        = "rest/api/2/permissions"
 	allUsersV2            = "rest/api/2/user/search"
 	allUsersV3            = "rest/api/latest/user/search"
-	allGroupsV2           = "rest/api/2/groups/picker"
 	groupMembersV2        = "rest/api/2/group/member"
 	allRoles              = "rest/api/2/role"
 	allProjects           = "rest/api/2/project"
-	groupRoles            = "rest/api/2/groups/picker"
-	groupRolesQueryV2     = "rest/api/2/groups/picker"
+	allGroupsV2           = "rest/api/2/groups/picker"
 	allPermissionSchemeV2 = "rest/api/2/permissionscheme"
 	addUserToGroup        = "rest/api/2/group/user"
 	NF                    = -1
@@ -360,7 +358,7 @@ func (client *Client) GetRole(ctx context.Context, roleId string) (RolesAPIData,
 // Return all group roles.
 func (client *Client) GetGroupRole(ctx context.Context) ([]Group, error) {
 	var groupRolesData GroupRolesAPIData
-	req, endpointUrl, err := getRequest(ctx, client, groupRoles, nil)
+	req, endpointUrl, err := getRequest(ctx, client, allGroupsV2, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -381,7 +379,7 @@ func (client *Client) GetGroupLabelRoles(ctx context.Context, groupName string) 
 		groupRoleData GroupRolesAPIData
 		groupRoles    []Labels
 	)
-	req, endpointUrl, err := getRequest(ctx, client, groupRolesQueryV2, Query{
+	req, endpointUrl, err := getRequest(ctx, client, allGroupsV2, Query{
 		"query": "",
 	})
 	if err != nil {
