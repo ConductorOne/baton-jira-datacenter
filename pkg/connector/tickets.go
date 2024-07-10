@@ -65,25 +65,42 @@ func (d *Connector) getTicketStatuses(ctx context.Context) ([]*v2.TicketStatus, 
 
 func (d *Connector) schemaForProject(ctx context.Context, project *jira.Project) (*v2.TicketSchema, error) {
 	var ticketTypes []*v2.TicketType
+	var issueTypeAllowedValues []*v2.TicketCustomFieldObjectValue
+
 	customFields := make(map[string]*v2.TicketCustomField)
 
 	var components []*v2.TicketCustomFieldObjectValue
 
-	for _, issueType := range project.IssueTypes {
-		// TODO: Maybe we care about subtasks?
-		if !issueType.Subtask {
-			ticketTypes = append(ticketTypes, &v2.TicketType{
-				Id:          issueType.ID,
-				DisplayName: issueType.Name,
-			})
-		}
-	}
 	for _, component := range project.Components {
 		components = append(components, &v2.TicketCustomFieldObjectValue{
 			Id:          component.ID,
 			DisplayName: component.Name,
 		})
 	}
+
+	for _, issueType := range project.IssueTypes {
+		// TODO: Maybe we care about subtasks?
+		if !issueType.Subtask {
+			// We want to migrate ticket type to be a custom field
+			// Remove this once everything is in a good state
+			ticketTypes = append(ticketTypes, &v2.TicketType{
+				Id:          issueType.ID,
+				DisplayName: issueType.Name,
+			})
+
+			issueTypeAllowedValues = append(issueTypeAllowedValues, &v2.TicketCustomFieldObjectValue{
+				Id:          issueType.ID,
+				DisplayName: issueType.Name,
+			})
+		}
+	}
+
+	customFields["issue_type"] = sdkTicket.PickObjectValueFieldSchema(
+		"issue_type",
+		"Issue Type",
+		true,
+		issueTypeAllowedValues,
+	)
 
 	// Add a required field for the project
 	customFields["project"] = sdkTicket.PickObjectValueFieldSchema(
