@@ -29,6 +29,8 @@ type JiraError struct {
 	ErrorCauses      []map[string]interface{} `json:"errorCauses,omitempty"`
 }
 
+type Query map[string]string
+
 func (b *JiraError) Error() string {
 	return b.ErrorMessage
 }
@@ -51,18 +53,16 @@ func (b *JiraError) Error() string {
 // DELETE - {instanceURL}/rest/api/2/role/{id}/actors
 
 const (
-	allPermissions      = "rest/api/2/permissions"
-	allUsersV2          = "rest/api/2/user/search?username="
-	allUsers            = "rest/api/latest/user/search?username=.&maxResults=10000"
-	allGroups           = "rest/api/2/groups/picker?maxResults=10000"
-	groupMembers        = "rest/api/2/group/member?groupname="
-	allRoles            = "rest/api/2/role"
-	allProjects         = "rest/api/2/project/"
-	groupRoles          = "rest/api/2/groups/picker"
-	groupRolesQuery     = "rest/api/2/groups/picker?query="
-	allPermissionScheme = "rest/api/2/permissionscheme?expand=permissions"
-	addUserToGroup      = "rest/api/2/group/user"
-	NF                  = -1
+	allPermissions        = "rest/api/2/permissions"
+	allUsersV2            = "rest/api/2/user/search"
+	allUsersV3            = "rest/api/latest/user/search"
+	groupMembersV2        = "rest/api/2/group/member"
+	allRoles              = "rest/api/2/role"
+	allProjects           = "rest/api/2/project"
+	allGroupsV2           = "rest/api/2/groups/picker"
+	allPermissionSchemeV2 = "rest/api/2/permissionscheme"
+	addUserToGroup        = "rest/api/2/group/user"
+	NF                    = -1
 )
 
 func New(ctx context.Context, instanceURL, accessToken string) (*Client, error) {
@@ -96,14 +96,31 @@ func IsUrl(str string) bool {
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
-func getRequest(ctx context.Context, cli *Client, apiUrl string) (*http.Request, string, error) {
-	var endpointUrl string = apiUrl
+func getRequest(ctx context.Context, cli *Client, apiUrl string, queryString map[string]string) (*http.Request, string, error) {
+	var (
+		endpointUrl string = apiUrl
+		err         error
+	)
 	if !IsUrl(apiUrl) {
-		endpointUrl = fmt.Sprintf("%s/%s", cli.BaseURL, apiUrl)
+		endpointUrl, err = url.JoinPath(cli.BaseURL, apiUrl)
+		if err != nil {
+			return nil, "", err
+		}
 	}
+
 	uri, err := url.Parse(endpointUrl)
 	if err != nil {
 		return nil, "", err
+	}
+
+	if len(queryString) > 0 {
+		q := uri.Query()
+		for k, v := range queryString {
+			q.Set(k, v)
+		}
+
+		uri.RawQuery = q.Encode()
+		endpointUrl = endpointUrl + "?" + uri.RawQuery
 	}
 
 	req, err := cli.httpClient.NewRequest(ctx,
@@ -134,7 +151,7 @@ func getCustomError(err error, resp *http.Response, endpointUrl string) *JiraErr
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2-getAllPermissions
 func (client *Client) ListAllPermissions(ctx context.Context) ([]Permission, error) {
 	var permissionsData PermissionsAPIData
-	req, endpointUrl, err := getRequest(ctx, client, allPermissions)
+	req, endpointUrl, err := getRequest(ctx, client, allPermissions, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +179,15 @@ func (client *Client) ListAllPermissions(ctx context.Context) ([]Permission, err
 // Returns all users that are present in the Jira instance.
 func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
 	var usersData []jira.User
-	req, endpointUrl, err := getRequest(ctx, client, allUsers)
+	endpointUrl, err := url.JoinPath(allUsersV3)
+	if err != nil {
+		return nil, err
+	}
+
+	req, endpointUrl, err := getRequest(ctx, client, endpointUrl, Query{
+		"username":   ".",
+		"maxResults": "10000",
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +205,9 @@ func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
 // Returns all groups that are present in the Jira instance.
 func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 	var groupsData GroupsAPIData
-	req, endpointUrl, err := getRequest(ctx, client, allGroups)
+	req, endpointUrl, err := getRequest(ctx, client, allGroupsV2, Query{
+		"maxResults": "10000",
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +225,9 @@ func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 // Returns all members that are present in a group.
 func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]GroupUser, error) {
 	var groupMembersAPIData GroupMembersAPIData
-	req, endpointUrl, err := getRequest(ctx, client, groupMembers+groupName)
+	req, endpointUrl, err := getRequest(ctx, client, groupMembersV2, Query{
+		"groupname": groupName,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +245,7 @@ func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]
 // Returns all roles that are present in the Jira instance.
 func (client *Client) ListAllRoles(ctx context.Context) ([]RolesAPIData, error) {
 	var rolesData []RolesAPIData
-	req, endpointUrl, err := getRequest(ctx, client, allRoles)
+	req, endpointUrl, err := getRequest(ctx, client, allRoles, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +263,9 @@ func (client *Client) ListAllRoles(ctx context.Context) ([]RolesAPIData, error) 
 // Returns specific users.
 func (client *Client) GetUser(ctx context.Context, userName string) (jira.User, error) {
 	var usersAPIData []UsersAPIData
-	req, endpointUrl, err := getRequest(ctx, client, allUsersV2+userName)
+	req, endpointUrl, err := getRequest(ctx, client, allUsersV2, Query{
+		"username": userName,
+	})
 	if err != nil {
 		return jira.User{}, err
 	}
@@ -263,7 +294,12 @@ func (client *Client) GetUser(ctx context.Context, userName string) (jira.User, 
 // Returns all roles that are present in specific project.
 func (client *Client) GetProjectRoles(ctx context.Context, projectId string) (map[string]string, error) {
 	var projectRolesAPIData map[string]string
-	req, endpointUrl, err := getRequest(ctx, client, allProjects+projectId+"/role")
+	endpointUrl, err := url.JoinPath(allProjects, projectId, "role")
+	if err != nil {
+		return nil, err
+	}
+
+	req, endpointUrl, err := getRequest(ctx, client, endpointUrl, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -281,7 +317,7 @@ func (client *Client) GetProjectRoles(ctx context.Context, projectId string) (ma
 // Returns all role details that are present in specific project.
 func (client *Client) GetProjectRoleDetails(ctx context.Context, urlApi string) (RolesAPIData, error) {
 	var projectRoleDetailsAPIData RolesAPIData
-	req, endpointUrl, err := getRequest(ctx, client, urlApi)
+	req, endpointUrl, err := getRequest(ctx, client, urlApi, nil)
 	if err != nil {
 		return RolesAPIData{}, err
 	}
@@ -299,7 +335,12 @@ func (client *Client) GetProjectRoleDetails(ctx context.Context, urlApi string) 
 // Return specific role.
 func (client *Client) GetRole(ctx context.Context, roleId string) (RolesAPIData, error) {
 	var rolesData RolesAPIData
-	req, endpointUrl, err := getRequest(ctx, client, allRoles+"/"+roleId)
+	endpointUrl, err := url.JoinPath(allRoles, roleId)
+	if err != nil {
+		return rolesData, err
+	}
+
+	req, endpointUrl, err := getRequest(ctx, client, endpointUrl, nil)
 	if err != nil {
 		return RolesAPIData{}, err
 	}
@@ -317,7 +358,7 @@ func (client *Client) GetRole(ctx context.Context, roleId string) (RolesAPIData,
 // Return all group roles.
 func (client *Client) GetGroupRole(ctx context.Context) ([]Group, error) {
 	var groupRolesData GroupRolesAPIData
-	req, endpointUrl, err := getRequest(ctx, client, groupRoles)
+	req, endpointUrl, err := getRequest(ctx, client, allGroupsV2, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +379,9 @@ func (client *Client) GetGroupLabelRoles(ctx context.Context, groupName string) 
 		groupRoleData GroupRolesAPIData
 		groupRoles    []Labels
 	)
-	req, endpointUrl, err := getRequest(ctx, client, groupRolesQuery+groupName)
+	req, endpointUrl, err := getRequest(ctx, client, allGroupsV2, Query{
+		"query": "",
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +403,9 @@ func (client *Client) GetGroupLabelRoles(ctx context.Context, groupName string) 
 // Returns all permission schemes that are present in the Jira DC.
 func (client *Client) ListAllPermissionScheme(ctx context.Context) (PermissionSchemes, error) {
 	var permissionSchemesAPIData PermissionSchemesAPIData
-	req, endpointUrl, err := getRequest(ctx, client, allPermissionScheme)
+	req, endpointUrl, err := getRequest(ctx, client, allPermissionSchemeV2, Query{
+		"expand": "permissions",
+	})
 	if err != nil {
 		return PermissionSchemes{}, err
 	}
@@ -376,15 +421,29 @@ func (client *Client) ListAllPermissionScheme(ctx context.Context) (PermissionSc
 }
 
 // post and delete requests.
-func getXRequest(ctx context.Context, cli *Client, method, apiUrl string, body BodyActors) (*http.Request, string, error) {
+func getXRequest(ctx context.Context, cli *Client, method, apiUrl string, queryString map[string]string, body BodyActors) (*http.Request, string, error) {
 	var (
 		req     *http.Request
 		options []uhttp.RequestOption
 	)
-	endpointUrl := fmt.Sprintf("%s/%s", cli.BaseURL, apiUrl)
+	endpointUrl, err := url.JoinPath(cli.BaseURL, apiUrl)
+	if err != nil {
+		return req, "", err
+	}
+
 	uri, err := url.Parse(endpointUrl)
 	if err != nil {
 		return nil, "", err
+	}
+
+	if len(queryString) > 0 {
+		q := uri.Query()
+		for k, v := range queryString {
+			q.Set(k, v)
+		}
+
+		uri.RawQuery = q.Encode()
+		endpointUrl = endpointUrl + "?" + uri.RawQuery
 	}
 
 	options = append(options, uhttp.WithAcceptJSONHeader())
@@ -410,8 +469,12 @@ func getXRequest(ctx context.Context, cli *Client, method, apiUrl string, body B
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/project/{projectIdOrKey}/role-addActorUsers
 func (client *Client) AddActorsToProjectRole(ctx context.Context, projectId, roleId string, body BodyActors) (ActorsAPIData, error) {
 	var actorsAPIData ActorsAPIData
-	url := fmt.Sprintf("%s/role/%s", allProjects+projectId, roleId)
-	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, url, body)
+	endpointUrl, err := url.JoinPath(allProjects, projectId, "role", roleId)
+	if err != nil {
+		return actorsAPIData, err
+	}
+
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, endpointUrl, nil, body)
 	if err != nil {
 		return ActorsAPIData{}, err
 	}
@@ -428,9 +491,15 @@ func (client *Client) AddActorsToProjectRole(ctx context.Context, projectId, rol
 // RemoveActorsProjectRole
 // Deletes actors (users or groups) from a project role in the Jira DC.
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/project/{projectIdOrKey}/role-deleteActor
-func (client *Client) RemoveActorsFromProjectRole(ctx context.Context, projectId, roleId, actor string) (int, error) {
-	url := fmt.Sprintf("%s/role/%s?%s", allProjects+projectId, roleId, actor)
-	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, url, BodyActors{})
+func (client *Client) RemoveActorsFromProjectRole(ctx context.Context, projectId, roleId, actor, actorName string) (int, error) {
+	endpointUrl, err := url.JoinPath(allProjects, projectId, "role", roleId)
+	if err != nil {
+		return NF, err
+	}
+
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, endpointUrl, Query{
+		actor: actorName,
+	}, BodyActors{})
 	if err != nil {
 		return NF, err
 	}
@@ -449,8 +518,14 @@ func (client *Client) RemoveActorsFromProjectRole(ctx context.Context, projectId
 // Returns the current state of the group.
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/group-addUserToGroup
 func (client *Client) AddUserToGroup(ctx context.Context, groupName, userName string) (int, error) {
-	url := addUserToGroup + "?groupname=" + groupName
-	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, url, BodyActors{
+	endpointUrl, err := url.JoinPath(addUserToGroup)
+	if err != nil {
+		return NF, err
+	}
+
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, endpointUrl, Query{
+		"groupname": groupName,
+	}, BodyActors{
 		Name: userName,
 	})
 	if err != nil {
@@ -489,8 +564,15 @@ func (client *Client) GetUserName(ctx context.Context, userId string) (string, e
 // Removes given user from a group in the Jira DC.
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/group-removeUserFromGroup
 func (client *Client) RemoveUserFromGroup(ctx context.Context, groupName, userName string) (int, error) {
-	url := addUserToGroup + "?groupname=" + groupName + "&username=" + userName
-	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, url, BodyActors{})
+	endpointUrl, err := url.JoinPath(addUserToGroup)
+	if err != nil {
+		return NF, err
+	}
+
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, endpointUrl, Query{
+		"groupname": groupName,
+		"username":  userName,
+	}, BodyActors{})
 	if err != nil {
 		return NF, err
 	}
@@ -509,8 +591,12 @@ func (client *Client) RemoveUserFromGroup(ctx context.Context, groupName, userNa
 // https://docs.atlassian.com/software/jira/docs/api/REST/7.6.1/#api/2/role-addProjectRoleActorsToRole
 func (client *Client) AddProjectRoleActorsToRole(ctx context.Context, roleId string, body BodyActors) (ActorsAPIData, error) {
 	var actorsAPIData ActorsAPIData
-	url := fmt.Sprintf("%s/%s/actors", allRoles, roleId)
-	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, url, body)
+	endpointUrl, err := url.JoinPath(allRoles, roleId, "actors")
+	if err != nil {
+		return actorsAPIData, err
+	}
+
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, endpointUrl, nil, body)
 	if err != nil {
 		return ActorsAPIData{}, err
 	}
@@ -527,9 +613,15 @@ func (client *Client) AddProjectRoleActorsToRole(ctx context.Context, roleId str
 // DeleteProjectRoleActorsFromRole
 // Removes default actor from the given role.
 // https://docs.atlassian.com/software/jira/docs/api/REST/7.6.1/#api/2/role-deleteProjectRoleActorsFromRole
-func (client *Client) DeleteProjectRoleActorsFromRole(ctx context.Context, roleId, actor string) (int, error) {
-	url := fmt.Sprintf("%s/%s/actors?%s", allRoles, roleId, actor)
-	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, url, BodyActors{})
+func (client *Client) DeleteProjectRoleActorsFromRole(ctx context.Context, roleId, actor, actorName string) (int, error) {
+	endpointUrl, err := url.JoinPath(allRoles, roleId, "actors")
+	if err != nil {
+		return NF, err
+	}
+
+	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, endpointUrl, Query{
+		actor: actorName,
+	}, BodyActors{})
 	if err != nil {
 		return NF, err
 	}
