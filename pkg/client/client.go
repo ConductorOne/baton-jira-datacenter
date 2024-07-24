@@ -52,6 +52,38 @@ func (b *JiraError) Error() string {
 // DELETE - {instanceURL}/rest/api/2/group/user?groupname={groupname}&username={username}
 // DELETE - {instanceURL}/rest/api/2/role/{id}/actors
 
+// ------------------------------
+// Global Permissions
+// ------------------------------
+// These permissions apply to all projects.
+// They are independent of project specific permissions.
+// If you wish to set permissions on a project-by-project basis you can set them up in the Permission Schemes.
+// To allow users to log in, they must have application access
+
+// ------------------------------
+// Jira Permissions
+// ------------------------------
+// Jira System Administrators
+// Ability to perform all administration functions. There must be at least one group with this permission.
+
+// Jira Administrators
+// Ability to perform most administration functions (excluding Import & Export, SMTP Configuration, etc.).
+
+// Browse Users
+// Ability to select a user or group from a popup window as well as the ability to use the 'share' issues feature. Users with this permission will also be able to see names of all users and groups in the system.
+
+// Create Shared Objects
+// Ability to share dashboards and filters with other users, groups and roles.
+
+// Manage Group Filter Subscriptions
+// Ability to manage (create and delete) group filter subscriptions.
+
+// Bulk Change
+// Ability to modify a collection of issues at once. For example, resolve multiple issues in one step.
+
+// Browse Archive
+// Ability to browse all archived issues.
+
 const (
 	allPermissions        = "rest/api/2/permissions"
 	allUsersV2            = "rest/api/2/user/search"
