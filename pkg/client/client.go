@@ -63,7 +63,8 @@ func (b *JiraError) Error() string {
 // ------------------------------
 // Set defaults for new users
 // A user must belong to a group assigned to an application to be able to log in and access that application.
-// When you create a user for a Jira application, that user is automatically added to the application's default group. Additional permissions can be assigned to a group via global permissions.
+// When you create a user for a Jira application, that user is automatically added to the application's default group.
+// Additional permissions can be assigned to a group via 'global permissions'.
 
 // ------------------------------
 // Jira Permissions Explanation
