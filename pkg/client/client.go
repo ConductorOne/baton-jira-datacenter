@@ -55,8 +55,15 @@ func (b *JiraError) Error() string {
 // ------------------------------
 // Global Permissions
 // ------------------------------
-// To allow users to log in, they must have application access
+// To allow users to log in, they must have 'application access'
 // https://confluence.atlassian.com/adminjiraserver/managing-global-permissions-938847142.html
+
+// ------------------------------
+// Application access
+// ------------------------------
+// Set defaults for new users
+// A user must belong to a group assigned to an application to be able to log in and access that application.
+// When you create a user for a Jira application, that user is automatically added to the application's default group. Additional permissions can be assigned to a group via global permissions.
 
 // ------------------------------
 // Jira Permissions Explanation
