@@ -55,13 +55,11 @@ func (b *JiraError) Error() string {
 // ------------------------------
 // Global Permissions
 // ------------------------------
-// These permissions apply to all projects.
-// They are independent of project specific permissions.
-// If you wish to set permissions on a project-by-project basis you can set them up in the Permission Schemes.
 // To allow users to log in, they must have application access
+// https://confluence.atlassian.com/adminjiraserver/managing-global-permissions-938847142.html
 
 // ------------------------------
-// Jira Permissions
+// Jira Permissions Explanation
 // ------------------------------
 // Jira System Administrators
 // Ability to perform all administration functions. There must be at least one group with this permission.
