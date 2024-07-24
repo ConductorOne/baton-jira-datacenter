@@ -76,7 +76,8 @@ func (b *JiraError) Error() string {
 // Ability to perform most administration functions (excluding Import & Export, SMTP Configuration, etc.).
 
 // Browse Users
-// Ability to select a user or group from a popup window as well as the ability to use the 'share' issues feature. Users with this permission will also be able to see names of all users and groups in the system.
+// Ability to select a user or group from a popup window as well as the ability to use the 'share' issues feature.
+// Users with this permission will also be able to see names of all users and groups in the system.
 
 // Create Shared Objects
 // Ability to share dashboards and filters with other users, groups and roles.
