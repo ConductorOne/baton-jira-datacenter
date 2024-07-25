@@ -29,6 +29,8 @@ In your Atlassian application go to:
 3) Give your new token a name.
 4) Optionally, for security reasons, you can set your token to automatically expire after a set number of days. 
 
+Note: Even though, every user can generate a personal access token, you must be an admin in order to sync resources.
+
 ## brew
 
 ```
