@@ -67,29 +67,13 @@ func (b *JiraError) Error() string {
 // Additional permissions can be assigned to a group via 'global permissions'.
 
 // ------------------------------
-// Jira Permissions Explanation
+// Jira Permissions
 // ------------------------------
 // Jira System Administrators
 // Ability to perform all administration functions. There must be at least one group with this permission.
 
 // Jira Administrators
 // Ability to perform most administration functions (excluding Import & Export, SMTP Configuration, etc.).
-
-// Browse Users
-// Ability to select a user or group from a popup window as well as the ability to use the 'share' issues feature.
-// Users with this permission will also be able to see names of all users and groups in the system.
-
-// Create Shared Objects
-// Ability to share dashboards and filters with other users, groups and roles.
-
-// Manage Group Filter Subscriptions
-// Ability to manage (create and delete) group filter subscriptions.
-
-// Bulk Change
-// Ability to modify a collection of issues at once. For example, resolve multiple issues in one step.
-
-// Browse Archive
-// Ability to browse all archived issues.
 
 const (
 	allPermissions        = "rest/api/2/permissions"
