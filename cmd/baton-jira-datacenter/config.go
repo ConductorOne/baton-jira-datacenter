@@ -7,7 +7,7 @@ import (
 var (
 	instanceURLField = field.StringField("instance-url", field.WithRequired(true), field.WithDescription(`The URL that Jira is hosted at. Example: "https://localhost:8080"`))
 	accessTokenField = field.StringField("access-token", field.WithRequired(true), field.WithDescription("The Jira personal access token to authenticate with."))
-	projectKeysField = field.StringSliceField("project-keys", field.WithDescription("The Jira project keys to filter for external ticket provisioning."))
+	projectKeysField = field.StringSliceField("project-keys", field.WithDescription("Limit external ticket schemas to any of the provided project keys"))
 )
 
 // configurationFields defines the external configuration required for the connector to run.
