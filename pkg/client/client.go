@@ -52,6 +52,29 @@ func (b *JiraError) Error() string {
 // DELETE - {instanceURL}/rest/api/2/group/user?groupname={groupname}&username={username}
 // DELETE - {instanceURL}/rest/api/2/role/{id}/actors
 
+// ------------------------------
+// Global Permissions
+// ------------------------------
+// To allow users to log in, they must have 'application access'
+// https://confluence.atlassian.com/adminjiraserver/managing-global-permissions-938847142.html
+
+// ------------------------------
+// Application access
+// ------------------------------
+// Set defaults for new users
+// A user must belong to a group assigned to an application to be able to log in and access that application.
+// When you create a user for a Jira application, that user is automatically added to the application's default group.
+// Additional permissions can be assigned to a group via 'global permissions'.
+
+// ------------------------------
+// Jira Permissions
+// ------------------------------
+// Jira System Administrators
+// Ability to perform all administration functions. There must be at least one group with this permission.
+
+// Jira Administrators
+// Ability to perform most administration functions (excluding Import & Export, SMTP Configuration, etc.).
+
 const (
 	allPermissions        = "rest/api/2/permissions"
 	allUsersV2            = "rest/api/2/user/search"
