@@ -160,13 +160,18 @@ func getRequest(ctx context.Context, cli *Client, apiUrl string, queryString map
 }
 
 func getCustomError(err error, resp *http.Response, endpointUrl string) *JiraError {
-	return &JiraError{
+	ce := &JiraError{
 		ErrorMessage:     err.Error(),
 		ErrorDescription: err.Error(),
-		ErrorCode:        resp.StatusCode,
-		ErrorSummary:     fmt.Sprint(resp.Body),
 		ErrorLink:        endpointUrl,
 	}
+
+	if resp != nil {
+		ce.ErrorCode = resp.StatusCode
+		ce.ErrorSummary = fmt.Sprint(resp.Body)
+	}
+
+	return ce
 }
 
 // ListAllPermissions
