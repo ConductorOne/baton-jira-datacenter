@@ -17,8 +17,16 @@ import (
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 )
 
+const maxProjects = 100
+
 func (d *Connector) ListTicketSchemas(ctx context.Context, pToken *pagination.Token) ([]*v2.TicketSchema, string, annotations.Annotations, error) {
 	var ret []*v2.TicketSchema
+
+	shouldFilterByProjectKey := len(d.projectKeys) != 0
+	projectKeyMap := make(map[string]bool)
+	for _, str := range d.projectKeys {
+		projectKeyMap[str] = true
+	}
 
 	projects, err := d.jiraClient.ListProjects(ctx)
 	if err != nil {
@@ -30,6 +38,14 @@ func (d *Connector) ListTicketSchemas(ctx context.Context, pToken *pagination.To
 	}
 
 	for _, project := range projects {
+		if shouldFilterByProjectKey {
+			if _, ok := projectKeyMap[project.Key]; !ok {
+				continue
+			}
+		}
+		if len(ret) == maxProjects {
+			break
+		}
 		schema, err := d.schemaForProject(ctx, project)
 		if err != nil {
 			return nil, "", nil, err

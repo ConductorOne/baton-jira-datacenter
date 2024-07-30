@@ -21,7 +21,7 @@ var version = "dev"
 func main() {
 	ctx := context.Background()
 
-	_, cmd, err := configschema.DefineConfiguration(ctx, "baton-jira-datacenter", getConnector, field.NewConfiguration(configurationFields))
+	_, cmd, err := configschema.DefineConfiguration(ctx, "baton-jira-datacenter", getConnector, field.NewConfiguration(configurationFields, configRelations...))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
@@ -38,7 +38,7 @@ func main() {
 
 func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, error) {
 	l := ctxzap.Extract(ctx)
-	cb, err := connector.New(ctx, v.GetString(instanceURLField.FieldName), v.GetString(accessTokenField.FieldName))
+	cb, err := connector.New(ctx, v.GetString(instanceURLField.FieldName), v.GetString(accessTokenField.FieldName), v.GetStringSlice(projectKeysField.FieldName))
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err
