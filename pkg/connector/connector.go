@@ -15,6 +15,7 @@ type Connector struct {
 	jiraClient     *client.Client
 	ticketSchemas  map[string]*v2.TicketSchema
 	ticketStatuses []*v2.TicketStatus
+	projectKeys    []string
 }
 
 // ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.
@@ -49,7 +50,7 @@ func (d *Connector) Validate(ctx context.Context) (annotations.Annotations, erro
 }
 
 // New returns a new instance of the connector.
-func New(ctx context.Context, instanceURL, accessToken string) (*Connector, error) {
+func New(ctx context.Context, instanceURL, accessToken string, projectKeys []string) (*Connector, error) {
 	jiraClient, err := client.New(ctx, instanceURL, accessToken)
 	if err != nil {
 		return nil, err
@@ -58,6 +59,7 @@ func New(ctx context.Context, instanceURL, accessToken string) (*Connector, erro
 	c := &Connector{
 		jiraClient:    jiraClient,
 		ticketSchemas: make(map[string]*v2.TicketSchema),
+		projectKeys:   projectKeys,
 	}
 
 	return c, nil
