@@ -12,6 +12,8 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	sdkTicket "github.com/conductorone/baton-sdk/pkg/types/ticket"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
@@ -20,6 +22,7 @@ import (
 const maxProjects = 100
 
 func (d *Connector) ListTicketSchemas(ctx context.Context, pToken *pagination.Token) ([]*v2.TicketSchema, string, annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
 	var ret []*v2.TicketSchema
 
 	shouldFilterByProjectKey := len(d.projectKeys) != 0
@@ -37,8 +40,10 @@ func (d *Connector) ListTicketSchemas(ctx context.Context, pToken *pagination.To
 		return nil, "", nil, errors.New("no projects found")
 	}
 
-	for _, project := range projects {
+	for i, project := range projects {
 		if len(ret) == maxProjects {
+			remainingProjects := len(projects) - i
+			l.Info("reached max of 100 projects", zap.Int("remainingProjects", remainingProjects))
 			break
 		}
 		if shouldFilterByProjectKey {
