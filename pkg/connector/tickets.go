@@ -38,13 +38,13 @@ func (d *Connector) ListTicketSchemas(ctx context.Context, pToken *pagination.To
 	}
 
 	for _, project := range projects {
+		if len(ret) == maxProjects {
+			break
+		}
 		if shouldFilterByProjectKey {
 			if _, ok := projectKeyMap[project.Key]; !ok {
 				continue
 			}
-		}
-		if len(ret) == maxProjects {
-			break
 		}
 		schema, err := d.schemaForProject(ctx, project)
 		if err != nil {
