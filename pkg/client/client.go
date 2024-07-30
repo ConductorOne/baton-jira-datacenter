@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"slices"
@@ -167,8 +168,14 @@ func getCustomError(err error, resp *http.Response, endpointUrl string) *JiraErr
 	}
 
 	if resp != nil {
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			ce.ErrorSummary = fmt.Sprintf("Error reading response body %s", err.Error())
+			return ce
+		}
+
 		ce.ErrorCode = resp.StatusCode
-		ce.ErrorSummary = fmt.Sprint(resp.Body)
+		ce.ErrorSummary = string(bodyBytes)
 	}
 
 	return ce
