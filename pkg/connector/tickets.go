@@ -242,6 +242,11 @@ func (d *Connector) issueToTicket(ctx context.Context, issue *jira.Issue) (*v2.T
 				})
 			}
 			retCustomFields[id] = sdkTicket.PickMultipleObjectValuesField(cf.GetId(), components)
+		case "issue_type":
+			retCustomFields[id] = sdkTicket.PickObjectValueField(cf.GetId(), &v2.TicketCustomFieldObjectValue{
+				Id:          issue.Fields.Type.ID,
+				DisplayName: issue.Fields.Type.Name,
+			})
 		}
 	}
 	ret.CustomFields = retCustomFields
@@ -315,7 +320,12 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 				componentIDs = append(componentIDs, component.GetId())
 			}
 			ticketOptions = append(ticketOptions, client.WithComponents(componentIDs...))
-
+		case "issue_type":
+			issueType, err := sdkTicket.GetPickObjectValue(ticketFields[id])
+			if err != nil {
+				return nil, nil, err
+			}
+			ticketOptions = append(ticketOptions, client.WithType(issueType.GetId()))
 		default:
 			val, err := sdkTicket.GetCustomFieldValue(ticketFields[id])
 			if err != nil {
