@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"slices"
 
-	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
+	jira "github.com/conductorone/go-jira/v2/onpremise"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
 )

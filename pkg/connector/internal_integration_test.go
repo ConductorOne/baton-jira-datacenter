@@ -7,13 +7,13 @@ import (
 	"strconv"
 	"testing"
 
-	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
+	jira "github.com/conductorone/go-jira/v2/onpremise"
 	"github.com/stretchr/testify/assert"
 )
 

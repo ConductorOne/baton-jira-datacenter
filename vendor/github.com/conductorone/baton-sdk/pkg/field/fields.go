@@ -51,8 +51,8 @@ func (s SchemaField) String() (string, error) {
 	return value, nil
 }
 
-// StringSlice retuns the default value as a string array.
-func (s SchemaField) StringSlice() ([]string, error) {
+// StringArray retuns the default value as a string array.
+func (s SchemaField) StringArray() ([]string, error) {
 	value, ok := s.DefaultValue.([]string)
 	if !ok {
 		return nil, WrongValueTypeErr
@@ -130,7 +130,7 @@ func IntField(name string, optional ...fieldOption) SchemaField {
 	return field
 }
 
-func StringSliceField(name string, optional ...fieldOption) SchemaField {
+func StringArrayField(name string, optional ...fieldOption) SchemaField {
 	field := SchemaField{
 		FieldName:    name,
 		FieldType:    reflect.Slice,

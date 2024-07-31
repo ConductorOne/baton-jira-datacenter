@@ -6,8 +6,6 @@ filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/DATA-DOG/go-sqlmock v1.5.0 h1:Shsta01QNfFxHCfpW6YH2STWB0MudeXXEWMr20OEh60=
 github.com/DATA-DOG/go-sqlmock v1.5.0/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
-github.com/andygrunwald/go-jira/v2 v2.0.0-20240419124508-6752705de4c7 h1:FYIM+f7fL+ji6i+wo8jmP1jS4cSnGjBQ2HAzmXL/BkM=
-github.com/andygrunwald/go-jira/v2 v2.0.0-20240419124508-6752705de4c7/go.mod h1:ZqySL3V+2YaH61NHTM9ZDOLpAXvS2KgbxCmVXOBpwv0=
 github.com/aws/aws-sdk-go-v2 v1.27.0 h1:7bZWKoXhzI+mMR/HjdMx8ZCC5+6fY0lS5tr0bbgiLlo=
 github.com/aws/aws-sdk-go-v2 v1.27.0/go.mod h1:ffIFB97e2yNsv4aTSGkqtHnppsIJzw7G7BReUZ3jCXM=
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.2 h1:x6xsQXGSmW6frevwDA+vi/wqhp1ct18mVXYN08/93to=
@@ -52,8 +50,10 @@ github.com/benbjohnson/clock v1.3.5/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZx
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
-github.com/conductorone/baton-sdk v0.2.13 h1:/9wJGlbiPxDQmjqKOTqyKpJ1Ui2+o7oYHInMqqR1PyQ=
-github.com/conductorone/baton-sdk v0.2.13/go.mod h1:cg5FyUcJnD7xK5SPbHe/KNpwUVVlpHJ9rnmd3UwxSkU=
+github.com/conductorone/baton-sdk v0.2.12 h1:u5tbqpSgk/hTsZ8auwEQFqS8UxprK9k8yuJddY8hsfE=
+github.com/conductorone/baton-sdk v0.2.12/go.mod h1:cg5FyUcJnD7xK5SPbHe/KNpwUVVlpHJ9rnmd3UwxSkU=
+github.com/conductorone/go-jira/v2 v2.0.0-20240730210232-f451d98f0fdb h1:/Hq65KWucwOsT0IB6sddPGwFLPypWh/NUcxX8wWYF+M=
+github.com/conductorone/go-jira/v2 v2.0.0-20240730210232-f451d98f0fdb/go.mod h1:eMJODGFmHWC1egXOWdPaYfiACqNcHaS5Cnf1VMHVRBU=
 github.com/cpuguy83/go-md2man/v2 v2.0.3/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
