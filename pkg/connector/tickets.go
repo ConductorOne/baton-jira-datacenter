@@ -3,7 +3,6 @@ package connector
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/url"
 	"path"
 	"time"
@@ -268,7 +267,6 @@ func (d *Connector) GetTicket(ctx context.Context, ticketId string) (*v2.Ticket,
 
 // This is returning nil for annotations.
 func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema *v2.TicketSchema) (*v2.Ticket, annotations.Annotations, error) {
-	fmt.Println("issue type", ticket.GetType().GetId())
 	ticketOptions := []client.FieldOption{
 		client.WithStatus(ticket.GetStatus().GetId()),
 		client.WithType(ticket.GetType().GetId()),
