@@ -7,11 +7,11 @@ import (
 	"path"
 	"time"
 
-	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	sdkTicket "github.com/conductorone/baton-sdk/pkg/types/ticket"
+	jira "github.com/conductorone/go-jira/v2/onpremise"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -61,12 +61,8 @@ func (d *Connector) ListTicketSchemas(ctx context.Context, pToken *pagination.To
 	return ret, "", nil, nil
 }
 
-func (d *Connector) getTicketStatuses(ctx context.Context) ([]*v2.TicketStatus, error) {
-	if d.ticketStatuses != nil {
-		return d.ticketStatuses, nil
-	}
-
-	statuses, err := d.jiraClient.ListStatuses(ctx)
+func (d *Connector) getTicketStatuses(ctx context.Context, projectId string) ([]*v2.TicketStatus, error) {
+	statuses, err := d.jiraClient.ListStatusesForProject(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
@@ -78,8 +74,6 @@ func (d *Connector) getTicketStatuses(ctx context.Context) ([]*v2.TicketStatus, 
 			DisplayName: status.Name,
 		})
 	}
-
-	d.ticketStatuses = ret
 
 	return ret, nil
 }
@@ -152,7 +146,7 @@ func (d *Connector) schemaForProject(ctx context.Context, project *jira.Project)
 		CustomFields: customFields,
 	}
 
-	statuses, err := d.getTicketStatuses(ctx)
+	statuses, err := d.getTicketStatuses(ctx, project.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -251,14 +245,6 @@ func (d *Connector) issueToTicket(ctx context.Context, issue *jira.Issue) (*v2.T
 	}
 	ret.CustomFields = retCustomFields
 
-	valid, err := sdkTicket.ValidateTicket(ctx, schema, ret)
-	if err != nil {
-		return nil, err
-	}
-	if !valid {
-		return nil, errors.New("ticket is invalid")
-	}
-
 	return ret, nil
 }
 func (d *Connector) GetTicket(ctx context.Context, ticketId string) (*v2.Ticket, annotations.Annotations, error) {
@@ -325,6 +311,7 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 			if err != nil {
 				return nil, nil, err
 			}
+
 			ticketOptions = append(ticketOptions, client.WithType(issueType.GetId()))
 		default:
 			val, err := sdkTicket.GetCustomFieldValue(ticketFields[id])

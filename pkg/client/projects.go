@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	jira "github.com/andygrunwald/go-jira/v2/onpremise"
+	jira "github.com/conductorone/go-jira/v2/onpremise"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
 )
@@ -59,6 +59,32 @@ func (c *Client) ListStatuses(ctx context.Context) ([]*jira.Status, error) {
 	for _, status := range statuses {
 		status := status
 		ret = append(ret, &status)
+	}
+
+	return ret, nil
+}
+
+func (c *Client) ListStatusesForProject(ctx context.Context, projectID string) ([]*jira.Status, error) {
+	l := ctxzap.Extract(ctx)
+
+	if projectID == "" {
+		return nil, errors.New("projectID is required")
+	}
+
+	statuses, _, err := c.client.Status.GetStatusesPaginated(ctx, &jira.StatusSearchOptions{
+		ProjectIDs: []string{projectID},
+	})
+	if err != nil {
+		l.Error("error getting statuses for project", zap.Error(err))
+		return nil, err
+	}
+
+	ret := make([]*jira.Status, 0, len(statuses))
+	for _, status := range statuses {
+		if status.StatusCategory.Key == "done" {
+			status := status
+			ret = append(ret, &status)
+		}
 	}
 
 	return ret, nil
