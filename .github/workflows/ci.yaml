@@ -58,7 +58,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Docker Compose as a Daemon (to start postgres and jira)
-        run: docker-compose -f ./docker-compose.yml up --detach
+        run: docker compose -f ./docker-compose.yml up --detach
 
       - name: Build baton-jira-datacenter
         run: go build ./cmd/baton-jira-datacenter
