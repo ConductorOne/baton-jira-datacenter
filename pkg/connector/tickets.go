@@ -94,6 +94,9 @@ func (d *Connector) schemaForProject(ctx context.Context, project *jira.Project)
 	}
 
 	for _, issueType := range project.IssueTypes {
+		if issueType.Name == "Epic" || issueType.Name == "Bug" {
+			continue
+		}
 		// TODO: Maybe we care about subtasks?
 		if !issueType.Subtask {
 			// We want to migrate ticket type to be a custom field
