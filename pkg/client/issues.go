@@ -95,11 +95,36 @@ func (c *Client) CreateIssue(ctx context.Context, projectID string, summary stri
 		}
 	}
 
-	issue, _, err := c.client.Issue.Create(ctx, i)
+	issue, resp, err := c.client.Issue.Create(ctx, i)
 	if err != nil {
-		l.Error("error creating issue", zap.Error(err))
-		return nil, err
+		jerr := jira.NewJiraError(resp, err)
+		l.Error("error creating issue", zap.Error(jerr))
+		return nil, jerr
 	}
 
 	return issue, nil
+}
+
+func (c *Client) GetIssueTypesForProject(ctx context.Context, projectKey string, opts *jira.GetQueryIssueTypeOptions) ([]*jira.MetaIssueType, error) {
+	l := ctxzap.Extract(ctx)
+
+	issueTypes, _, err := c.client.Issue.GetCreateMetaProjectIssueTypes(ctx, projectKey, opts)
+	if err != nil {
+		l.Error("error getting issue types", zap.Error(err))
+		return nil, err
+	}
+
+	return issueTypes, nil
+}
+
+func (c *Client) GetIssueTypeFields(ctx context.Context, projectKey, issueTypeId string, opts *jira.GetQueryIssueTypeOptions) ([]*jira.MetaDataFields, error) {
+	l := ctxzap.Extract(ctx)
+
+	issueFields, _, err := c.client.Issue.GetCreateMetaIssueType(ctx, projectKey, issueTypeId, opts)
+	if err != nil {
+		l.Error("error getting issue type", zap.Error(err))
+		return nil, err
+	}
+
+	return issueFields, nil
 }

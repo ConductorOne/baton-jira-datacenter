@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/url"
 	"path"
+	"strconv"
 	"time"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -20,6 +21,165 @@ import (
 )
 
 const maxProjects = 100
+
+// example https://developer.atlassian.com/server/jira/platform/jira-rest-api-example-create-issue-7897248/
+func (d *Connector) customFieldSchemaToMetaField(field *v2.TicketCustomField) (interface{}, error) {
+	if field == nil {
+		return nil, nil
+	}
+
+	type JiraPickerStruct struct {
+		Id string `json:"id"`
+	}
+
+	pickObjects := []*JiraPickerStruct{}
+
+	switch v := field.GetValue().(type) {
+	case *v2.TicketCustomField_StringValue:
+		strValue := v.StringValue.GetValue()
+		if d.cfIdToJiraType[field.GetId()] == jira.TypeUser {
+			return jira.User{
+				Name: strValue,
+			}, nil
+		}
+		if d.cfIdToJiraType[field.GetId()] == jira.TypeNumber {
+			v, err := strconv.Atoi(strValue)
+			if err != nil {
+				return nil, err
+			}
+			return v, nil
+		}
+		return strValue, nil
+
+	case *v2.TicketCustomField_StringValues:
+		if len(v.StringValues.GetValues()) == 0 {
+			return nil, nil
+		}
+		return v.StringValues.GetValues(), nil
+
+	case *v2.TicketCustomField_BoolValue:
+		return v.BoolValue.GetValue(), nil
+
+	case *v2.TicketCustomField_TimestampValue:
+		// must be in ISO 8601 date time format (RFC3339)
+		// https://developer.atlassian.com/server/jira/platform/jira-rest-api-example-create-issue-7897248/#datetimefield
+		// -> Date time picker custom field
+		return v.TimestampValue.GetValue().AsTime().Format(time.RFC3339), nil
+
+	case *v2.TicketCustomField_PickStringValue:
+		return v.PickStringValue.GetValue(), nil
+
+	case *v2.TicketCustomField_PickMultipleStringValues:
+		if len(v.PickMultipleStringValues.GetValues()) == 0 {
+			return nil, nil
+		}
+		return v.PickMultipleStringValues.GetValues(), nil
+
+	case *v2.TicketCustomField_PickObjectValue:
+		if v.PickObjectValue.GetValue() != nil {
+			return &JiraPickerStruct{
+				Id: v.PickObjectValue.GetValue().GetId(),
+			}, nil
+		}
+	case *v2.TicketCustomField_PickMultipleObjectValues:
+		if len(v.PickMultipleObjectValues.GetValues()) == 0 {
+			return nil, nil
+		}
+		for _, value := range v.PickMultipleObjectValues.GetValues() {
+			pickObjects = append(pickObjects, &JiraPickerStruct{Id: value.GetId()})
+		}
+		return pickObjects, nil
+
+	default:
+		return nil, errors.New("error: unknown custom field type")
+	}
+
+	return nil, nil
+}
+
+func (d *Connector) getCustomFieldsForProject(ctx context.Context, projectId string, issueTypes []jira.IssueType) ([]*v2.TicketCustomField, error) {
+	customFields := make([]*v2.TicketCustomField, 0)
+	for _, issueType := range issueTypes {
+		if issueType.Name == "Epic" ||
+			issueType.Name == "Bug" ||
+			issueType.Name == "Improvement" ||
+			issueType.Name == "New Feature" {
+			continue
+		}
+		issueFields, err := d.jiraClient.GetIssueTypeFields(ctx, projectId, issueType.ID, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, field := range issueFields {
+			var customField *v2.TicketCustomField
+			var allowedValues []*v2.TicketCustomFieldObjectValue
+
+			if !field.Required || field.Schema.Custom == "" {
+				continue
+			}
+
+			hasAllowedValues := len(field.AllowedValues) > 0
+			isMultiSelect := field.Schema.Items != ""
+
+			if hasAllowedValues {
+				for _, choice := range field.AllowedValues {
+					displayName := choice.Name
+					if displayName == "" {
+						displayName = choice.Value
+					}
+					allowedValues = append(allowedValues, &v2.TicketCustomFieldObjectValue{
+						Id:          choice.Id,
+						DisplayName: displayName,
+					})
+				}
+			}
+
+			id := field.FieldId
+
+			switch field.Schema.Type {
+			case jira.TypeString:
+				customField = sdkTicket.StringFieldSchema(id, field.Name, false)
+			case jira.TypeArray:
+				switch {
+				case isMultiSelect && hasAllowedValues:
+					customField = sdkTicket.PickMultipleObjectValuesFieldSchema(id, field.Name, false, allowedValues)
+				case !isMultiSelect && hasAllowedValues:
+					customField = sdkTicket.PickObjectValueFieldSchema(id, field.Name, false, allowedValues)
+				case isMultiSelect && !hasAllowedValues:
+					customField = sdkTicket.StringsFieldSchema(id, field.Name, false)
+				default:
+					customField = sdkTicket.StringFieldSchema(id, field.Name, false)
+				}
+			case jira.TypeDate, jira.TypeDateTime:
+				customField = sdkTicket.TimestampFieldSchema(id, field.Name, false)
+			case jira.TypeNumber:
+				customField = sdkTicket.StringFieldSchema(id, field.Name, false)
+			case jira.TypeObject, jira.TypeOption:
+				if hasAllowedValues {
+					customField = sdkTicket.PickObjectValueFieldSchema(id, field.Name, false, allowedValues)
+				} else {
+					customField = sdkTicket.StringFieldSchema(id, field.Name, false)
+				}
+			// We're exluding some types as they have a specific jira object type for the create issue request
+			// and we dont really have a way to model them on our settings page, other than just them providing a string id
+			// We'll need to check their type and create the correct object in customFieldSchemaToMetaField
+			default:
+				// Default to pick object or string depending on if has options. These fields would still be required to create a ticket
+				// even if these types dont perfectly match the jira object
+				if hasAllowedValues {
+					customField = sdkTicket.PickObjectValueFieldSchema(id, field.Name, false, allowedValues)
+				} else {
+					customField = sdkTicket.StringFieldSchema(id, field.Name, false)
+				}
+			}
+			d.cfIdToJiraType[id] = field.Schema.Type
+			customFields = append(customFields, customField)
+		}
+	}
+
+	return customFields, nil
+}
 
 func (d *Connector) ListTicketSchemas(ctx context.Context, pToken *pagination.Token) ([]*v2.TicketSchema, string, annotations.Annotations, error) {
 	l := ctxzap.Extract(ctx)
@@ -111,6 +271,15 @@ func (d *Connector) schemaForProject(ctx context.Context, project *jira.Project)
 				DisplayName: issueType.Name,
 			})
 		}
+	}
+
+	otherCustomFields, err := d.getCustomFieldsForProject(ctx, project.ID, project.IssueTypes)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, cf := range otherCustomFields {
+		customFields[cf.GetId()] = cf
 	}
 
 	customFields["issue_type"] = sdkTicket.PickObjectValueFieldSchema(
@@ -279,7 +448,12 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 
 	ticketFields := ticket.GetCustomFields()
 
+	project, ok := schema.GetCustomFields()["project"]
+
 	var projectID string
+	if ok {
+		projectID = project.GetId()
+	}
 
 	for id, cf := range schema.GetCustomFields() {
 		switch id {
@@ -317,17 +491,17 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 
 			ticketOptions = append(ticketOptions, client.WithType(issueType.GetId()))
 		default:
-			val, err := sdkTicket.GetCustomFieldValue(ticketFields[id])
+			metaFieldValue, err := d.customFieldSchemaToMetaField(ticketFields[id])
 			if err != nil {
 				return nil, nil, err
 			}
 
 			// The ticket doesn't have this key set, so we skip it
-			if val == nil {
+			if metaFieldValue == nil {
 				continue
 			}
 
-			ticketOptions = append(ticketOptions, client.WithCustomField(cf.GetId(), val))
+			ticketOptions = append(ticketOptions, client.WithCustomField(cf.GetId(), metaFieldValue))
 		}
 	}
 
