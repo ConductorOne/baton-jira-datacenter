@@ -448,12 +448,7 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 
 	ticketFields := ticket.GetCustomFields()
 
-	project, ok := schema.GetCustomFields()["project"]
-
 	var projectID string
-	if ok {
-		projectID = project.GetId()
-	}
 
 	for id, cf := range schema.GetCustomFields() {
 		switch id {
