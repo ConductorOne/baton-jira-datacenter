@@ -108,23 +108,46 @@ func (c *Client) CreateIssue(ctx context.Context, projectID string, summary stri
 func (c *Client) GetIssueTypesForProject(ctx context.Context, projectKey string, opts *jira.GetQueryIssueTypeOptions) ([]*jira.MetaIssueType, error) {
 	l := ctxzap.Extract(ctx)
 
-	issueTypes, _, err := c.client.Issue.GetCreateMetaProjectIssueTypes(ctx, projectKey, opts)
-	if err != nil {
-		l.Error("error getting issue types", zap.Error(err))
-		return nil, err
+	var allIssueTypes []*jira.MetaIssueType
+	for {
+		issueTypes, _, isLast, err := c.client.Issue.GetCreateMetaProjectIssueTypes(ctx, projectKey, opts)
+		if err != nil {
+			l.Error("error getting issue types", zap.Error(err))
+			return nil, err
+		}
+
+		allIssueTypes = append(allIssueTypes, issueTypes...)
+
+		if isLast || opts == nil {
+			break
+		}
+
+		opts.StartAt += len(allIssueTypes)
 	}
 
-	return issueTypes, nil
+	return allIssueTypes, nil
 }
 
 func (c *Client) GetIssueTypeFields(ctx context.Context, projectKey, issueTypeId string, opts *jira.GetQueryIssueTypeOptions) ([]*jira.MetaDataFields, error) {
 	l := ctxzap.Extract(ctx)
 
-	issueFields, _, err := c.client.Issue.GetCreateMetaIssueType(ctx, projectKey, issueTypeId, opts)
-	if err != nil {
-		l.Error("error getting issue type", zap.Error(err))
-		return nil, err
+	allMetaFields := make([]*jira.MetaDataFields, 0)
+
+	for {
+		issueFields, _, isLast, err := c.client.Issue.GetCreateMetaIssueType(ctx, projectKey, issueTypeId, opts)
+		if err != nil {
+			l.Error("error getting issue type", zap.Error(err))
+			return nil, err
+		}
+
+		allMetaFields = append(allMetaFields, issueFields...)
+
+		if isLast || opts == nil {
+			break
+		}
+
+		opts.StartAt += len(allMetaFields)
 	}
 
-	return issueFields, nil
+	return allMetaFields, nil
 }

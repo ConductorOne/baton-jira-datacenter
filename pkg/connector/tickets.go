@@ -106,7 +106,10 @@ func (d *Connector) getCustomFieldsForProject(ctx context.Context, projectId str
 			issueType.Name == "New Feature" {
 			continue
 		}
-		issueFields, err := d.jiraClient.GetIssueTypeFields(ctx, projectId, issueType.ID, nil)
+		issueFields, err := d.jiraClient.GetIssueTypeFields(ctx, projectId, issueType.ID, &jira.GetQueryIssueTypeOptions{
+			MaxResults: 100,
+			StartAt:    0,
+		})
 		if err != nil {
 			return nil, err
 		}
