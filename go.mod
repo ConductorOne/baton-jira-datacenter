@@ -3,7 +3,7 @@ module github.com/conductorone/baton-jira-datacenter
 go 1.22.2
 
 require (
-	github.com/conductorone/baton-sdk v0.2.13
+	github.com/conductorone/baton-sdk v0.2.18
 	github.com/conductorone/go-jira/v2 v2.0.0-20240730210232-f451d98f0fdb
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	go.uber.org/zap v1.27.0
@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/allegro/bigcache/v3 v3.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
