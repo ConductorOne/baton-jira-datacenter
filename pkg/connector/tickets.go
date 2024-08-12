@@ -37,17 +37,19 @@ func (d *Connector) customFieldSchemaToMetaField(field *v2.TicketCustomField) (i
 	switch v := field.GetValue().(type) {
 	case *v2.TicketCustomField_StringValue:
 		strValue := v.StringValue.GetValue()
-		if d.cfIdToJiraType[field.GetId()] == jira.TypeUser {
-			return jira.User{
-				Name: strValue,
-			}, nil
-		}
-		if d.cfIdToJiraType[field.GetId()] == jira.TypeNumber {
-			v, err := strconv.Atoi(strValue)
-			if err != nil {
-				return nil, err
+		if typ, ok := d.cfIdToJiraType[field.GetId()]; ok {
+			if typ == jira.TypeUser {
+				return jira.User{
+					Name: strValue,
+				}, nil
 			}
-			return v, nil
+			if typ == jira.TypeNumber {
+				v, err := strconv.Atoi(strValue)
+				if err != nil {
+					return nil, err
+				}
+				return v, nil
+			}
 		}
 		return strValue, nil
 
@@ -64,7 +66,11 @@ func (d *Connector) customFieldSchemaToMetaField(field *v2.TicketCustomField) (i
 		// must be in ISO 8601 date time format (RFC3339)
 		// https://developer.atlassian.com/server/jira/platform/jira-rest-api-example-create-issue-7897248/#datetimefield
 		// -> Date time picker custom field
-		return v.TimestampValue.GetValue().AsTime().Format(time.RFC3339), nil
+		val := v.TimestampValue.GetValue()
+		if val != nil {
+			return val.AsTime().Format(time.RFC3339), nil
+		}
+		return val, nil
 
 	case *v2.TicketCustomField_PickStringValue:
 		return v.PickStringValue.GetValue(), nil
