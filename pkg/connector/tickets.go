@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"path"
 	"strconv"
@@ -97,7 +98,7 @@ func (d *Connector) customFieldSchemaToMetaField(field *v2.TicketCustomField) (i
 		return pickObjects, nil
 
 	default:
-		return nil, errors.New("error: unknown custom field type")
+		return nil, fmt.Errorf("error: unknown custom field type for field ID %s", field.GetId())
 	}
 
 	return nil, nil
@@ -105,11 +106,15 @@ func (d *Connector) customFieldSchemaToMetaField(field *v2.TicketCustomField) (i
 
 func (d *Connector) getCustomFieldsForProject(ctx context.Context, projectId string, issueTypes []jira.IssueType) ([]*v2.TicketCustomField, error) {
 	customFields := make([]*v2.TicketCustomField, 0)
+	excludeTypes := map[string]bool{
+		"Epic":        true,
+		"Bug":         true,
+		"Improvement": true,
+		"New Feature": true,
+	}
+
 	for _, issueType := range issueTypes {
-		if issueType.Name == "Epic" ||
-			issueType.Name == "Bug" ||
-			issueType.Name == "Improvement" ||
-			issueType.Name == "New Feature" {
+		if excludeTypes[issueType.Name] {
 			continue
 		}
 		issueFields, err := d.jiraClient.GetIssueTypeFields(ctx, projectId, issueType.ID, &jira.GetQueryIssueTypeOptions{
@@ -497,7 +502,7 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 		default:
 			metaFieldValue, err := d.customFieldSchemaToMetaField(ticketFields[id])
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("error converting custom field to meta field %s: %w", id, err)
 			}
 
 			// The ticket doesn't have this key set, so we skip it
