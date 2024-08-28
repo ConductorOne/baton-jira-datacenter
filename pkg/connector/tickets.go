@@ -253,7 +253,6 @@ func (d *Connector) getTicketStatuses(ctx context.Context, projectId string) ([]
 }
 
 func (d *Connector) schemaForProject(ctx context.Context, project *jira.Project) (*v2.TicketSchema, error) {
-	var ticketTypes []*v2.TicketType
 	var issueTypeAllowedValues []*v2.TicketCustomFieldObjectValue
 
 	customFields := make(map[string]*v2.TicketCustomField)
@@ -273,13 +272,6 @@ func (d *Connector) schemaForProject(ctx context.Context, project *jira.Project)
 		}
 		// TODO: Maybe we care about subtasks?
 		if !issueType.Subtask {
-			// We want to migrate ticket type to be a custom field
-			// Remove this once everything is in a good state
-			ticketTypes = append(ticketTypes, &v2.TicketType{
-				Id:          issueType.ID,
-				DisplayName: issueType.Name,
-			})
-
 			issueTypeAllowedValues = append(issueTypeAllowedValues, &v2.TicketCustomFieldObjectValue{
 				Id:          issueType.ID,
 				DisplayName: issueType.Name,
@@ -328,7 +320,6 @@ func (d *Connector) schemaForProject(ctx context.Context, project *jira.Project)
 	ret := &v2.TicketSchema{
 		Id:           project.Key,
 		DisplayName:  project.Name,
-		Types:        ticketTypes,
 		CustomFields: customFields,
 	}
 
@@ -455,7 +446,6 @@ func (d *Connector) GetTicket(ctx context.Context, ticketId string) (*v2.Ticket,
 func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema *v2.TicketSchema) (*v2.Ticket, annotations.Annotations, error) {
 	ticketOptions := []client.FieldOption{
 		client.WithStatus(ticket.GetStatus().GetId()),
-		client.WithType(ticket.GetType().GetId()),
 		client.WithDescription(ticket.GetDescription()),
 		client.WithLabels(ticket.GetLabels()...),
 	}
@@ -497,7 +487,6 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 			if err != nil {
 				return nil, nil, err
 			}
-
 			ticketOptions = append(ticketOptions, client.WithType(issueType.GetId()))
 		default:
 			metaFieldValue, err := d.customFieldSchemaToMetaField(ticketFields[id])
