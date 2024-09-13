@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strconv"
 	"time"
@@ -92,16 +93,41 @@ func shouldWaitAndRetry(ctx context.Context, err error) bool {
 		attempts = 0
 		return true
 	}
-	if status.Code(err) != codes.Unavailable {
+	if status.Code(err) != codes.Unavailable && status.Code(err) != codes.DeadlineExceeded {
 		return false
 	}
 
 	attempts++
 	l := ctxzap.Extract(ctx)
 
+	// use linear time by default
 	var wait time.Duration = time.Duration(attempts) * time.Second
 
-	l.Error("retrying operation", zap.Error(err), zap.Duration("wait", wait))
+	// If error contains rate limit data, use that instead
+	if st, ok := status.FromError(err); ok {
+		details := st.Details()
+		for _, detail := range details {
+			if rlData, ok := detail.(*v2.RateLimitDescription); ok {
+				waitResetAt := time.Until(rlData.ResetAt.AsTime())
+				if waitResetAt <= 0 {
+					continue
+				}
+				duration := time.Duration(rlData.Limit)
+				if duration <= 0 {
+					continue
+				}
+				waitResetAt /= duration
+				// Round up to the nearest second to make sure we don't hit the rate limit again
+				waitResetAt = time.Duration(math.Ceil(waitResetAt.Seconds())) * time.Second
+				if waitResetAt > 0 {
+					wait = waitResetAt
+					break
+				}
+			}
+		}
+	}
+
+	l.Warn("retrying operation", zap.Error(err), zap.Duration("wait", wait))
 
 	for {
 		select {
@@ -235,7 +261,7 @@ func (s *syncer) Sync(ctx context.Context) error {
 
 		case SyncAssetsOp:
 			err = s.SyncAssets(ctx)
-			if err != nil {
+			if !shouldWaitAndRetry(ctx, err) {
 				return err
 			}
 			continue
@@ -1325,7 +1351,7 @@ func (s *syncer) runGrantExpandActions(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
-func (s *syncer) newExpandedGrant(ctx context.Context, descEntitlement *v2.Entitlement, principal *v2.Resource) (*v2.Grant, error) {
+func (s *syncer) newExpandedGrant(_ context.Context, descEntitlement *v2.Entitlement, principal *v2.Resource) (*v2.Grant, error) {
 	enResource := descEntitlement.GetResource()
 	if enResource == nil {
 		return nil, fmt.Errorf("newExpandedGrant: entitlement has no resource")
