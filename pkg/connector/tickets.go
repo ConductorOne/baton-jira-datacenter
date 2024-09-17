@@ -52,6 +52,9 @@ func (d *Connector) customFieldSchemaToMetaField(field *v2.TicketCustomField) (i
 				return v, nil
 			}
 		}
+		if len(strValue) == 0 {
+			return nil, nil
+		}
 		return strValue, nil
 
 	case *v2.TicketCustomField_StringValues:
@@ -444,6 +447,7 @@ func (d *Connector) GetTicket(ctx context.Context, ticketId string) (*v2.Ticket,
 
 // This is returning nil for annotations.
 func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema *v2.TicketSchema) (*v2.Ticket, annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
 	ticketOptions := []client.FieldOption{
 		client.WithStatus(ticket.GetStatus().GetId()),
 		client.WithDescription(ticket.GetDescription()),
@@ -499,6 +503,7 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 				continue
 			}
 
+			l.Info("adding custom field to new ticket", zap.String("id", id), zap.Any("value", metaFieldValue))
 			ticketOptions = append(ticketOptions, client.WithCustomField(cf.GetId(), metaFieldValue))
 		}
 	}
