@@ -76,14 +76,14 @@ func WithComponents(componentIDs ...string) FieldOption {
 	}
 }
 
-func (c *Client) CreateIssue(ctx context.Context, projectID string, summary string, opts ...FieldOption) (*jira.Issue, error) {
+func (c *Client) CreateIssue(ctx context.Context, projectKey string, summary string, opts ...FieldOption) (*jira.Issue, error) {
 	l := ctxzap.Extract(ctx)
 
 	i := &jira.Issue{
 		Fields: &jira.IssueFields{
 			Summary: summary,
 			Project: jira.Project{
-				ID: projectID,
+				Key: projectKey,
 			},
 		},
 	}

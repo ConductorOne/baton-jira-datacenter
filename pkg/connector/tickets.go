@@ -319,7 +319,7 @@ func (d *Connector) GetTicketSchema(ctx context.Context, schemaID string) (*v2.T
 
 	// Format is projectKey:issueID
 	schemaIds := strings.Split(schemaID, ":")
-	if len(schemaID) != 2 {
+	if len(schemaIds) != 2 {
 		return nil, nil, errors.New("schema ID format should be projectKey:issueTypeID")
 	}
 
@@ -419,7 +419,7 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 
 	ticketFields := ticket.GetCustomFields()
 
-	var projectID string
+	var projectKey string
 	var issueTypeID string
 	var err error
 
@@ -427,29 +427,17 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 	if projectAnno == nil {
 		// If no projectAnnotation assume schema id is project
 		// Because the config schema may have not been updated
-		projectID = schema.Id
+		projectKey = schema.Id
 	} else {
-		projectID, issueTypeID, err = GetProjectKeyAndIssueTypeIDFromSchemaID(schema.Id)
+		projectKey, issueTypeID, err = GetProjectKeyAndIssueTypeIDFromSchemaID(schema.Id)
 		if err != nil {
 			return nil, nil, err
 		}
-		//projectID = projectAnno.ProjectId
+		// This could use projectAnno.ProjectId but the former schemaID is the projectKey so using
 	}
 
 	for id, cf := range schema.GetCustomFields() {
 		switch id {
-		//case "project":
-		//	project, err := sdkTicket.GetPickObjectValue(ticketFields[id])
-		//	if err != nil {
-		//		return nil, nil, err
-		//	}
-		//
-		//	if project.GetId() == "" {
-		//		return nil, nil, errors.New("error: unable to create ticket, project is required")
-		//	}
-		//
-		//	projectID = project.GetId()
-
 		case "components":
 			comps, err := sdkTicket.GetPickMultipleObjectValues(ticketFields[id])
 			if err != nil {
@@ -504,7 +492,7 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 		return nil, nil, errors.New("error: unable to create ticket, ticket is invalid")
 	}
 
-	iss, err := d.jiraClient.CreateIssue(ctx, projectID, ticket.GetDisplayName(), ticketOptions...)
+	iss, err := d.jiraClient.CreateIssue(ctx, projectKey, ticket.GetDisplayName(), ticketOptions...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -558,7 +546,7 @@ func GetProjectAnnotation(annotations []*anypb.Any) *pt.IssueTypeProject {
 func GetProjectKeyAndIssueTypeIDFromSchemaID(schemaID string) (string, string, error) {
 	// Format is projectKey:issueID
 	schemaIds := strings.Split(schemaID, ":")
-	if len(schemaID) != 2 {
+	if len(schemaIds) != 2 {
 		return "", "", errors.New("schema ID format should be projectKey:issueTypeID")
 	}
 	return schemaIds[0], schemaIds[1], nil
