@@ -207,8 +207,8 @@ func (d *Connector) getCustomFieldsForIssueType(ctx context.Context, projectId s
 		var customField *v2.TicketCustomField
 		var allowedValues []*v2.TicketCustomFieldObjectValue
 
-		// TODO(lauren) (remove required/custom)?
-		if !field.Required || field.Schema.Custom == "" {
+		// TODO(lauren) remove custom?
+		if field.Schema.Custom == "" {
 			continue
 		}
 
