@@ -33,6 +33,26 @@ var excludeTypes = map[string]bool{
 	"New Feature": true,
 }
 
+// Format is projectKey:issueID
+type ProjectKeyIssueTypeIDSchemaID struct {
+	ProjectKey  string
+	IssueTypeID string
+}
+
+func (p ProjectKeyIssueTypeIDSchemaID) String() string {
+	return fmt.Sprintf("%s:%s", p.ProjectKey, p.IssueTypeID)
+}
+
+func (p *ProjectKeyIssueTypeIDSchemaID) Parse(schemaID string) error {
+	schemaIDParts := strings.Split(schemaID, ":")
+	if len(schemaIDParts) != 2 {
+		return errors.New("invalid schemaID format, expected 'projectKey:issueTypeID'")
+	}
+	p.ProjectKey = schemaIDParts[0]
+	p.IssueTypeID = schemaIDParts[1]
+	return nil
+}
+
 // example https://developer.atlassian.com/server/jira/platform/jira-rest-api-example-create-issue-7897248/
 func (d *Connector) customFieldSchemaToMetaField(field *v2.TicketCustomField) (interface{}, error) {
 	if field == nil {
@@ -162,13 +182,15 @@ func (d *Connector) ListTicketSchemas(ctx context.Context, pToken *pagination.To
 				continue
 			}
 
-			if !issueType.Subtask {
-				schema, err := d.schemaForProjectIssueType(ctx, project, &issueType, statuses, multipleProjects)
-				if err != nil {
-					return nil, "", nil, err
-				}
-				ret = append(ret, schema)
+			if issueType.Subtask {
+				continue
 			}
+
+			schema, err := d.schemaForProjectIssueType(ctx, project, &issueType, statuses, multipleProjects)
+			if err != nil {
+				return nil, "", nil, err
+			}
+			ret = append(ret, schema)
 		}
 	}
 
@@ -285,7 +307,12 @@ func (d *Connector) schemaForProjectIssueType(ctx context.Context, project *jira
 		customFieldsMap[cf.GetId()] = cf
 	}
 
-	schemaId := fmt.Sprintf("%s:%s", project.Key, issueType.ID)
+	projectKeySchemaID := &ProjectKeyIssueTypeIDSchemaID{
+		ProjectKey:  project.Key,
+		IssueTypeID: issueType.ID,
+	}
+	schemaId := projectKeySchemaID.String()
+
 	displayName := issueType.Name
 
 	if includeProjectInName {
@@ -317,18 +344,18 @@ func (d *Connector) GetTicketSchema(ctx context.Context, schemaID string) (*v2.T
 		return schema, nil, nil
 	}
 
-	// Format is projectKey:issueID
-	schemaIDParts := strings.Split(schemaID, ":")
-	if len(schemaIDParts) != 2 {
-		return nil, nil, errors.New("schema ID format should be projectKey:issueTypeID")
-	}
-
-	project, err := d.jiraClient.GetProject(ctx, schemaIDParts[0])
+	projectKeyIssueTypeID := &ProjectKeyIssueTypeIDSchemaID{}
+	err := projectKeyIssueTypeID.Parse(schemaID)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	issueType := findIssueTypeFromProject(project, schemaIDParts[1])
+	project, err := d.jiraClient.GetProject(ctx, projectKeyIssueTypeID.ProjectKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	issueType := findIssueTypeFromProject(project, projectKeyIssueTypeID.IssueTypeID)
 	if issueType == nil {
 		return nil, nil, errors.New("issueType not found")
 	}
@@ -421,7 +448,6 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 
 	var projectKey string
 	var issueTypeID string
-	var err error
 
 	projectAnno := GetProjectAnnotation(schema.Annotations)
 	if projectAnno == nil {
@@ -429,11 +455,15 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 		// Because the config schema may have not been updated
 		projectKey = schema.Id
 	} else {
-		projectKey, issueTypeID, err = GetProjectKeyAndIssueTypeIDFromSchemaID(schema.Id)
+		projectKeyIssueTypeID := &ProjectKeyIssueTypeIDSchemaID{}
+		err := projectKeyIssueTypeID.Parse(schema.Id)
 		if err != nil {
 			return nil, nil, err
 		}
-		// This could use projectAnno.ProjectId but the former schemaID is the projectKey so using
+		projectKey = projectKeyIssueTypeID.ProjectKey
+		issueTypeID = projectKeyIssueTypeID.IssueTypeID
+		// This could use projectAnno.ProjectKey but the former schemaID is the projectKey so using
+		// this for consistency
 	}
 
 	for id, cf := range schema.GetCustomFields() {
@@ -541,13 +571,4 @@ func GetProjectAnnotation(annotations []*anypb.Any) *pt.IssueTypeProject {
 		}
 	}
 	return nil
-}
-
-func GetProjectKeyAndIssueTypeIDFromSchemaID(schemaID string) (string, string, error) {
-	// Format is projectKey:issueID
-	schemaIDParts := strings.Split(schemaID, ":")
-	if len(schemaIDParts) != 2 {
-		return "", "", errors.New("schema ID format should be projectKey:issueTypeID")
-	}
-	return schemaIDParts[0], schemaIDParts[1], nil
 }
