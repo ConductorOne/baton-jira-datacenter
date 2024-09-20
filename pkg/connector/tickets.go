@@ -155,7 +155,7 @@ func (d *Connector) ListTicketSchemas(ctx context.Context, pToken *pagination.To
 		}
 		statuses, err := d.getTicketStatuses(ctx, project.ID)
 		if err != nil {
-			return ret, "", nil, err
+			return nil, "", nil, err
 		}
 		for _, issueType := range project.IssueTypes {
 			if excludeTypes[issueType.Name] {
@@ -318,17 +318,17 @@ func (d *Connector) GetTicketSchema(ctx context.Context, schemaID string) (*v2.T
 	}
 
 	// Format is projectKey:issueID
-	schemaIds := strings.Split(schemaID, ":")
-	if len(schemaIds) != 2 {
+	schemaIDParts := strings.Split(schemaID, ":")
+	if len(schemaIDParts) != 2 {
 		return nil, nil, errors.New("schema ID format should be projectKey:issueTypeID")
 	}
 
-	project, err := d.jiraClient.GetProject(ctx, schemaIds[0])
+	project, err := d.jiraClient.GetProject(ctx, schemaIDParts[0])
 	if err != nil {
 		return nil, nil, err
 	}
 
-	issueType := findIssueTypeFromProject(project, schemaIds[1])
+	issueType := findIssueTypeFromProject(project, schemaIDParts[1])
 	if issueType == nil {
 		return nil, nil, errors.New("issueType not found")
 	}
@@ -545,9 +545,9 @@ func GetProjectAnnotation(annotations []*anypb.Any) *pt.IssueTypeProject {
 
 func GetProjectKeyAndIssueTypeIDFromSchemaID(schemaID string) (string, string, error) {
 	// Format is projectKey:issueID
-	schemaIds := strings.Split(schemaID, ":")
-	if len(schemaIds) != 2 {
+	schemaIDParts := strings.Split(schemaID, ":")
+	if len(schemaIDParts) != 2 {
 		return "", "", errors.New("schema ID format should be projectKey:issueTypeID")
 	}
-	return schemaIds[0], schemaIds[1], nil
+	return schemaIDParts[0], schemaIDParts[1], nil
 }
