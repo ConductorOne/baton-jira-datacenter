@@ -68,6 +68,9 @@ func (d *Connector) customFieldSchemaToMetaField(field *v2.TicketCustomField) (i
 	switch v := field.GetValue().(type) {
 	case *v2.TicketCustomField_StringValue:
 		strValue := v.StringValue.GetValue()
+		if len(strValue) == 0 {
+			return nil, nil
+		}
 		if typ, ok := d.cfIdToJiraType[field.GetId()]; ok {
 			if typ == jira.TypeUser {
 				return jira.User{
@@ -81,9 +84,6 @@ func (d *Connector) customFieldSchemaToMetaField(field *v2.TicketCustomField) (i
 				}
 				return v, nil
 			}
-		}
-		if len(strValue) == 0 {
-			return nil, nil
 		}
 		return strValue, nil
 
