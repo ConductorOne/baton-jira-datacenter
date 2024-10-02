@@ -33,7 +33,7 @@ var excludeTypes = map[string]bool{
 	"New Feature": true,
 }
 
-// Format is projectKey:issueID
+// Format is projectKey:issueID.
 type ProjectKeyIssueTypeIDSchemaID struct {
 	ProjectKey  string
 	IssueTypeID string
