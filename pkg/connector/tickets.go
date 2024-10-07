@@ -86,7 +86,15 @@ func (d *Connector) customFieldSchemaToMetaField(field *v2.TicketCustomField) (i
 			}
 		}
 		return strValue, nil
-
+	case *v2.TicketCustomField_NumberValue:
+		if v.NumberValue == nil {
+			return nil, nil
+		}
+		numValue := v.NumberValue.GetValue()
+		if numValue == nil {
+			return nil, nil
+		}
+		return numValue.GetValue(), nil
 	case *v2.TicketCustomField_StringValues:
 		if len(v.StringValues.GetValues()) == 0 {
 			return nil, nil
