@@ -77,6 +77,7 @@ func (b *JiraError) Error() string {
 // Ability to perform most administration functions (excluding Import & Export, SMTP Configuration, etc.).
 
 const (
+	myself                = "rest/api/2/myself"
 	allPermissions        = "rest/api/2/permissions"
 	allUsersV2            = "rest/api/2/user/search"
 	allUsersV3            = "rest/api/latest/user/search"
@@ -668,4 +669,17 @@ func (client *Client) DeleteProjectRoleActorsFromRole(ctx context.Context, roleI
 
 	defer resp.Body.Close()
 	return resp.StatusCode, err
+}
+
+func (client *Client) Myself(ctx context.Context) error {
+	req, _, err := getRequest(ctx, client, myself, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
 }

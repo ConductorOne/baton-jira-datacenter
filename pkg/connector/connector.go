@@ -46,7 +46,7 @@ func (d *Connector) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error)
 // Validate is called to ensure that the connector is properly configured. It should exercise any API credentials
 // to be sure that they are valid.
 func (d *Connector) Validate(ctx context.Context) (annotations.Annotations, error) {
-	return nil, nil
+	return nil, d.jiraClient.Myself(ctx)
 }
 
 // New returns a new instance of the connector.
