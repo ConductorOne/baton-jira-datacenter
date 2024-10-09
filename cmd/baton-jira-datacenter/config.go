@@ -10,7 +10,8 @@ var (
 	projectKeysField = field.StringSliceField("project-keys", field.WithDescription("Limit external ticket schemas to any of the provided project keys"))
 )
 
-// configurationFields defines the external configuration required for the connector to run.
+// configurationFields defines the external configuration fields necessary for the Jira Datacenter connector to
+// function.
 var configurationFields = []field.SchemaField{
 	instanceURLField,
 	accessTokenField,

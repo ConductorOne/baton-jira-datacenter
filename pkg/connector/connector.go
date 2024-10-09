@@ -39,7 +39,7 @@ func (d *Connector) Asset(ctx context.Context, asset *v2.AssetRef) (string, io.R
 func (d *Connector) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error) {
 	return &v2.ConnectorMetadata{
 		DisplayName: "Jira (Datacenter)",
-		Description: "Implements syncing, provisioning, and ticketing for jira datacenter instances",
+		Description: "Implements syncing, provisioning, and ticketing for Jira Datacenter instances",
 	}, nil
 }
 
