@@ -26,6 +26,14 @@ import (
 
 const maxProjects = 100
 
+var ignoreRequiredSystem = map[string]bool{
+	"issuetype": true,
+	"project":   true,
+	"assignee":  true,
+	"summary":   true,
+	"reporter":  true,
+}
+
 var excludeTypes = map[string]bool{
 	"Epic":        true,
 	"Bug":         true,
@@ -230,8 +238,14 @@ func (d *Connector) getCustomFieldsForIssueType(ctx context.Context, projectId s
 		var allowedValues []*v2.TicketCustomFieldObjectValue
 
 		// TODO(lauren) remove custom?
-		if field.Schema.Custom == "" {
-			continue
+		if !field.Required {
+			if field.Schema.Custom == "" && field.FieldId != "components" {
+				continue
+			}
+		} else {
+			if _, ok := ignoreRequiredSystem[field.FieldId]; ok {
+				continue
+			}
 		}
 
 		hasAllowedValues := len(field.AllowedValues) > 0
