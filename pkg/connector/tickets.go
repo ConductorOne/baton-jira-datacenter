@@ -276,7 +276,11 @@ func (d *Connector) getCustomFieldsForIssueType(ctx context.Context, projectId s
 			case !isMultiSelect && hasAllowedValues:
 				customField = sdkTicket.PickObjectValueFieldSchema(id, field.Name, field.Required, allowedValues)
 			case isMultiSelect && !hasAllowedValues:
-				customField = sdkTicket.StringsFieldSchema(id, field.Name, field.Required)
+				if field.Schema.Items == "component" {
+					customField = sdkTicket.PickMultipleObjectValuesFieldSchema(id, field.Name, field.Required, allowedValues)
+				} else {
+					customField = sdkTicket.StringsFieldSchema(id, field.Name, field.Required)
+				}
 			default:
 				customField = sdkTicket.StringFieldSchema(id, field.Name, field.Required)
 			}
@@ -482,20 +486,6 @@ func (d *Connector) CreateTicket(ctx context.Context, ticket *v2.Ticket, schema 
 
 	for id, cf := range schema.GetCustomFields() {
 		switch id {
-		case "components":
-			comps, err := sdkTicket.GetPickMultipleObjectValues(ticketFields[id])
-			if err != nil {
-				if errors.Is(err, sdkTicket.ErrFieldNil) {
-					continue
-				}
-				return nil, nil, err
-			}
-
-			componentIDs := make([]string, 0, len(comps))
-			for _, component := range comps {
-				componentIDs = append(componentIDs, component.GetId())
-			}
-			ticketOptions = append(ticketOptions, client.WithComponents(componentIDs...))
 		case "issue_type":
 			// If issueTypeID is empty, the config has not been updated to use issue type as schema
 			// So issue type is still stored in the custom fields
