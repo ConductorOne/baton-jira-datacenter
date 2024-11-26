@@ -24,6 +24,9 @@ jobs:
         run: go build -o connector ./cmd/baton-jira-datacenter
 
       - name: Run and save output
+        env:
+          BATON_INSTANCE_URL: 'http://localhost:8080'
+          BATON_ACCESS_TOKEN: 'test'
         run: ./connector capabilities > baton_capabilities.json
 
       - name: Commit changes
