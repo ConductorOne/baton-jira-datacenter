@@ -87,15 +87,17 @@ Available Commands:
   help               Help about any command
 
 Flags:
-      --access-token string    The Jira personal access token to authenticate with. ($BATON_ACCESS_TOKEN)
+      --access-token string    required: The Jira personal access token to authenticate with. ($BATON_ACCESS_TOKEN)
       --client-id string       The client ID used to authenticate with ConductorOne ($BATON_CLIENT_ID)
       --client-secret string   The client secret used to authenticate with ConductorOne ($BATON_CLIENT_SECRET)
   -f, --file string            The path to the c1z file to sync with ($BATON_FILE) (default "sync.c1z")
   -h, --help                   help for baton-jira-datacenter
-      --instance-url string    The URL that Jira is hosted at. Example: "https://localhost:8080" ($BATON_INSTANCE_URL)
+      --instance-url string    required: The URL that Jira is hosted at. Example: "https://localhost:8080" ($BATON_INSTANCE_URL)
       --log-format string      The output format for logs: json, console ($BATON_LOG_FORMAT) (default "json")
       --log-level string       The log level: debug, info, warn, error ($BATON_LOG_LEVEL) (default "info")
-  -p, --provisioning           This must be set in order for provisioning actions to be enabled. ($BATON_PROVISIONING)
+      --project-keys strings   Limit external ticket schemas to any of the provided project keys ($BATON_PROJECT_KEYS)
+  -p, --provisioning           This must be set in order for provisioning actions to be enabled ($BATON_PROVISIONING)
+      --skip-full-sync         This must be set to skip a full sync ($BATON_SKIP_FULL_SYNC)
       --ticketing              This must be set to enable ticketing support ($BATON_TICKETING)
   -v, --version                version for baton-jira-datacenter
 
