@@ -71,8 +71,9 @@
     }
   ],
   "connectorCapabilities": [
-    "CAPABILITY_SYNC",
     "CAPABILITY_PROVISION",
+    "CAPABILITY_SYNC",
     "CAPABILITY_TICKETING"
-  ]
+  ],
+  "credentialDetails": {}
 }
