@@ -2,6 +2,7 @@ package connector
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -115,6 +116,8 @@ func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 		return nil, "", nil, err
 	}
 
+	l := ctxzap.Extract(ctx)
+
 	for _, role := range roles {
 		if roleId != role.ID {
 			continue
@@ -125,6 +128,10 @@ func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 			case userRole:
 				user, err := r.client.GetUser(ctx, actor.Name)
 				if err != nil {
+					if errors.Is(err, client.ErrUserNotFound) {
+						l.Warn("User not found", zap.String("userId", actor.Name))
+						continue
+					}
 					return nil, "", nil, err
 				}
 

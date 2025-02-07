@@ -2,6 +2,7 @@ package connector
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -124,11 +125,17 @@ func (p *projectBuilder) Grants(ctx context.Context, resource *v2.Resource, pTok
 			return nil, "", nil, err
 		}
 
+		l := ctxzap.Extract(ctx)
+
 		for _, actor := range role.Actors {
 			switch actor.Type {
 			case userRole:
 				user, err := p.client.GetUser(ctx, actor.Name)
 				if err != nil {
+					if errors.Is(err, client.ErrUserNotFound) {
+						l.Warn("User not found", zap.String("userId", actor.Name))
+						continue
+					}
 					return nil, "", nil, err
 				}
 
