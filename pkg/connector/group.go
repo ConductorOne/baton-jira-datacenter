@@ -2,6 +2,7 @@ package connector
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -108,6 +109,8 @@ func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 		return nil, "", nil, err
 	}
 
+	l := ctxzap.Extract(ctx)
+
 	for _, member := range groupMembers {
 		roles, err := g.client.GetGroupLabelRoles(ctx, groupId)
 		if err != nil {
@@ -118,6 +121,10 @@ func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 			permission := role.Text
 			user, err := g.client.GetUser(ctx, member.Name)
 			if err != nil {
+				if errors.Is(err, client.ErrUserNotFound) {
+					l.Warn("User not found", zap.String("userId", member.Name))
+					continue
+				}
 				return nil, "", nil, err
 			}
 

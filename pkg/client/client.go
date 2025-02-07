@@ -30,6 +30,10 @@ type JiraError struct {
 	ErrorCauses      []map[string]interface{} `json:"errorCauses,omitempty"`
 }
 
+var (
+	ErrUserNotFound = fmt.Errorf("user not found")
+)
+
 type Query map[string]string
 
 func (b *JiraError) Error() string {
@@ -312,6 +316,11 @@ func (client *Client) GetUser(ctx context.Context, userName string) (jira.User, 
 	}
 
 	defer resp.Body.Close()
+
+	if len(usersAPIData) == 0 {
+		return jira.User{}, fmt.Errorf("%w: %s", ErrUserNotFound, userName)
+	}
+
 	user := usersAPIData[0]
 
 	return jira.User{
