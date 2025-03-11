@@ -1,11 +1,13 @@
 module github.com/conductorone/baton-jira-datacenter
 
-go 1.22.2
+go 1.23
 
 require (
 	github.com/conductorone/baton-sdk v0.2.61
 	github.com/conductorone/go-jira/v2 v2.0.0-20240808231011-dc00f11d2470
+	github.com/ennyjfrick/ruleguard-logfatal v0.0.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
+	github.com/quasilyte/go-ruleguard/dsl v0.3.22
 	go.uber.org/zap v1.27.0
 	google.golang.org/protobuf v1.34.1
 )
@@ -92,7 +94,7 @@ require (
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/oauth2 v0.20.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/text v0.16.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240515191416-fc5f0ca64291 // indirect
