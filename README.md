@@ -90,6 +90,7 @@ Flags:
       --access-token string    required: The Jira personal access token to authenticate with. ($BATON_ACCESS_TOKEN)
       --client-id string       The client ID used to authenticate with ConductorOne ($BATON_CLIENT_ID)
       --client-secret string   The client secret used to authenticate with ConductorOne ($BATON_CLIENT_SECRET)
+      --default-group-name     The default group name (jira-software-users by default)
   -f, --file string            The path to the c1z file to sync with ($BATON_FILE) (default "sync.c1z")
   -h, --help                   help for baton-jira-datacenter
       --instance-url string    required: The URL that Jira is hosted at. Example: "https://localhost:8080" ($BATON_INSTANCE_URL)
