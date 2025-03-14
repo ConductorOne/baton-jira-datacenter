@@ -50,8 +50,8 @@ func (d *Connector) Validate(ctx context.Context) (annotations.Annotations, erro
 }
 
 // New returns a new instance of the connector.
-func New(ctx context.Context, instanceURL, accessToken string, projectKeys []string) (*Connector, error) {
-	jiraClient, err := client.New(ctx, instanceURL, accessToken)
+func New(ctx context.Context, instanceURL, accessToken string, projectKeys []string, defaultGroupName string) (*Connector, error) {
+	jiraClient, err := client.New(ctx, instanceURL, accessToken, defaultGroupName)
 	if err != nil {
 		return nil, err
 	}

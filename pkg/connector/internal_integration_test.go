@@ -24,6 +24,7 @@ var (
 	parentResourceID       = &v2.ResourceId{}
 	pToken                 = &pagination.Token{}
 	grantPrincipalTypeUser = "user"
+	defaultGroupName       = "jira-software-users"
 )
 
 func TestGroupBuilderList(t *testing.T) {
@@ -31,7 +32,7 @@ func TestGroupBuilderList(t *testing.T) {
 		t.Skip()
 	}
 
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	g := &groupBuilder{
 		client: cli,
 	}
@@ -45,7 +46,7 @@ func TestProjectBuilderList(t *testing.T) {
 		t.Skip()
 	}
 
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	p := &projectBuilder{
 		client: cli,
 	}
@@ -59,7 +60,7 @@ func TestUserBuilderList(t *testing.T) {
 		t.Skip()
 	}
 
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	u := &userBuilder{
 		client: cli,
 	}
@@ -73,7 +74,7 @@ func TestRoleBuilderList(t *testing.T) {
 		t.Skip()
 	}
 
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	r := &roleBuilder{
 		client: cli,
 	}
@@ -88,7 +89,7 @@ func TestProjectBuilderGrants(t *testing.T) {
 	}
 
 	pToken := &pagination.Token{}
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	p := &projectBuilder{
 		client: cli,
 	}
@@ -167,7 +168,7 @@ func TestGroupBuilderEntitlements(t *testing.T) {
 	}
 
 	pToken := &pagination.Token{}
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	g := &groupBuilder{
 		client: cli,
 	}
@@ -222,7 +223,7 @@ func TestProjectBuilderGrantGroup(t *testing.T) {
 	assert.Nil(t, err)
 
 	entitlement := getEntitlementForTesting(resource, grantPrincipalType, roleEntitlement)
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	projectBuilder := getProjectBuilderForTesting(cli)
 	_, err = projectBuilder.Grant(ctx, principal, entitlement)
 	assert.Nil(t, err)
@@ -256,7 +257,7 @@ func TestProjectBuilderGrantUsers(t *testing.T) {
 	assert.Nil(t, err)
 
 	entitlement := getEntitlementForTesting(resource, grantPrincipalType, roleEntitlement)
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	projectBuilder := getProjectBuilderForTesting(cli)
 	_, err = projectBuilder.Grant(ctx, principal, entitlement)
 	assert.Nil(t, err)
@@ -290,7 +291,7 @@ func TestProjectBuilderRevokeGroup(t *testing.T) {
 	resource, err := projectResource(ctx, *project, nil)
 	assert.Nil(t, err)
 
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	projectBuilder := getProjectBuilderForTesting(cli)
 	gr := grant.NewGrant(resource, roleId, principal.Id)
 	annos := annotations.Annotations(gr.Annotations)
@@ -331,7 +332,7 @@ func TestProjectBuilderRevokeUser(t *testing.T) {
 	resource, err := projectResource(ctx, *project, nil)
 	assert.Nil(t, err)
 
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	projectBuilder := getProjectBuilderForTesting(cli)
 	gr := grant.NewGrant(resource, roleId, principal.Id)
 	annos := annotations.Annotations(gr.Annotations)
@@ -372,7 +373,7 @@ func TestGroupBuilderGrantUser(t *testing.T) {
 	assert.Nil(t, err)
 
 	entitlement := getEntitlementForTesting(resource, grantPrincipalType, roleEntitlement)
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	groupBuilder := getGroupBuilderForTesting(cli)
 	_, err = groupBuilder.Grant(ctx, principal, entitlement)
 	assert.Nil(t, err)
@@ -406,7 +407,7 @@ func TestGroupBuilderRevokeUser(t *testing.T) {
 	resource, err := groupResource(ctx, *group, nil)
 	assert.Nil(t, err)
 
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	groupBuilder := getGroupBuilderForTesting(cli)
 	gr := grant.NewGrant(resource, roleId, principal.Id)
 	annos := annotations.Annotations(gr.Annotations)
@@ -504,7 +505,7 @@ func TestRoleBuilderGrantGroup(t *testing.T) {
 	assert.Nil(t, err)
 
 	entitlement := getEntitlementForTesting(resource, grantPrincipalType, roleEntitlement)
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	roleBuilder := getRoleBuilderForTesting(cli)
 	_, err = roleBuilder.Grant(ctx, principal, entitlement)
 	assert.Nil(t, err)
@@ -538,7 +539,7 @@ func TestRoleBuilderGrantUsers(t *testing.T) {
 	assert.Nil(t, err)
 
 	entitlement := getEntitlementForTesting(resource, grantPrincipalType, roleEntitlement)
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	roleBuilder := getRoleBuilderForTesting(cli)
 	_, err = roleBuilder.Grant(ctx, principal, entitlement)
 	assert.Nil(t, err)
@@ -572,7 +573,7 @@ func TestRoleBuilderRevokeGroup(t *testing.T) {
 	resource, err := roleResource(ctx, *role, nil)
 	assert.Nil(t, err)
 
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	roleBuilder := getRoleBuilderForTesting(cli)
 	gr := grant.NewGrant(resource, roleId, principal.Id)
 	annos := annotations.Annotations(gr.Annotations)
@@ -613,7 +614,7 @@ func TestRoleBuilderRevokeUser(t *testing.T) {
 	resource, err := roleResource(ctx, *role, nil)
 	assert.Nil(t, err)
 
-	cli, _ := client.New(ctx, instanceUrl, accessToken)
+	cli, _ := client.New(ctx, instanceUrl, accessToken, defaultGroupName)
 	roleBuilder := getRoleBuilderForTesting(cli)
 	gr := grant.NewGrant(resource, roleId, principal.Id)
 	annos := annotations.Annotations(gr.Annotations)

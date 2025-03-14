@@ -38,7 +38,12 @@ func main() {
 
 func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, error) {
 	l := ctxzap.Extract(ctx)
-	cb, err := connector.New(ctx, v.GetString(instanceURLField.FieldName), v.GetString(accessTokenField.FieldName), v.GetStringSlice(projectKeysField.FieldName))
+	cb, err := connector.New(ctx,
+		v.GetString(instanceURLField.FieldName),
+		v.GetString(accessTokenField.FieldName),
+		v.GetStringSlice(projectKeysField.FieldName),
+		v.GetString(defaultGroupName.FieldName),
+	)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err

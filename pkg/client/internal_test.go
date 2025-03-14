@@ -10,9 +10,10 @@ import (
 )
 
 var (
-	ctx            = context.Background()
-	instanceUrl, _ = os.LookupEnv("BATON_INSTANCE_URL")
-	accessToken, _ = os.LookupEnv("BATON_ACCESS_TOKEN")
+	ctx              = context.Background()
+	instanceUrl, _   = os.LookupEnv("BATON_INSTANCE_URL")
+	accessToken, _   = os.LookupEnv("BATON_ACCESS_TOKEN")
+	defaultGroupName = "jira-software-users"
 )
 
 func TestClientListAllPermissions(t *testing.T) {
@@ -20,7 +21,7 @@ func TestClientListAllPermissions(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	permissions, err := client.ListAllPermissions(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, permissions)
@@ -31,7 +32,7 @@ func TestClientListAllUsers(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	roles, err := client.ListAllUsers(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
@@ -42,7 +43,7 @@ func TestClientListAllGroups(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	roles, err := client.ListAllGroups(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
@@ -75,7 +76,7 @@ func TestClientGetGroupMembers(t *testing.T) {
 		},
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			roles, err := client.GetGroupMembers(ctx, test.groupName)
@@ -90,7 +91,7 @@ func TestClientListAllRoles(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	roles, err := client.ListAllRoles(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
@@ -101,7 +102,7 @@ func TestClientGetUser(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	user, err := client.GetUser(ctx, "globaluser")
 	assert.Nil(t, err)
 	assert.NotNil(t, user)
@@ -112,7 +113,7 @@ func TestClientGetProjectRoles(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	roleList, err := client.GetProjectRoles(ctx, "10000")
 	assert.Nil(t, err)
 	assert.NotNil(t, roleList)
@@ -137,7 +138,7 @@ func TestClientGetProjectRoleDetails(t *testing.T) {
 		},
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			roles, err := client.GetProjectRoleDetails(ctx, test.url)
@@ -165,7 +166,7 @@ func TestClientGetRole(t *testing.T) {
 			roleId: "10100",
 		},
 	}
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			roles, err := client.GetRole(ctx, test.roleId)
@@ -180,7 +181,7 @@ func TestClientGetGroupRole(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	roleByGroups, err := client.GetGroupRole(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, roleByGroups)
@@ -191,7 +192,7 @@ func TestClientGetGroupRoles(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	roles, err := client.GetGroupLabelRoles(ctx, "global-group")
 	assert.Nil(t, err)
 	assert.NotNil(t, roles)
@@ -202,7 +203,7 @@ func TestClientListAllPermissionScheme(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	permissionList, err := client.ListAllPermissionScheme(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, permissionList)
@@ -213,7 +214,7 @@ func TestClientAddActorsToProjectRole(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	body := BodyActors{
 		Group: []string{
 			"jira-software-users",
@@ -229,7 +230,7 @@ func TestClientRemoveActorsFromProjectRole(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	statusCode, err := client.RemoveActorsFromProjectRole(ctx, "10000", "10002", "group", "jira-administrators")
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusNoContent, statusCode)
@@ -240,7 +241,7 @@ func TestClientAddUserToGroupFails(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	userName, err := client.GetUserName(ctx, "JIRAUSER10103")
 	assert.Nil(t, err)
 
@@ -253,7 +254,7 @@ func TestClientAddUserToGroup(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	userName, err := client.GetUserName(ctx, "JIRAUSER10103")
 	assert.Nil(t, err)
 
@@ -267,7 +268,7 @@ func TestClientRemoveUserFromGroup(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	userName, err := client.GetUserName(ctx, "JIRAUSER10103")
 	assert.Nil(t, err)
 
@@ -281,7 +282,7 @@ func TestClientAddProjectRoleActorsToRoleWithGroup(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	actors, err := client.AddProjectRoleActorsToRole(ctx, "10002", BodyActors{
 		Group: []string{
 			"jira-software-users",
@@ -296,7 +297,7 @@ func TestClientAddProjectRoleActorsToRoleWithUser(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	actors, err := client.AddProjectRoleActorsToRole(ctx, "10002", BodyActors{
 		User: []string{
 			"JIRAUSER10103",
@@ -311,7 +312,7 @@ func TestClientDeleteProjectRoleActorsFromRoleWithGroup(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	statusCode, err := client.DeleteProjectRoleActorsFromRole(ctx, "10002", "group", "jira-software-users")
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusOK, statusCode)
@@ -322,7 +323,7 @@ func TestClientDeleteProjectRoleActorsFromRoleWithUser(t *testing.T) {
 		t.Skip()
 	}
 
-	client, _ := New(ctx, instanceUrl, accessToken)
+	client, _ := New(ctx, instanceUrl, accessToken, defaultGroupName)
 	statusCode, err := client.DeleteProjectRoleActorsFromRole(ctx, "10002", "user", "JIRAUSER10102")
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusOK, statusCode)

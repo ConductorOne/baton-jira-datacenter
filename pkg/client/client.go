@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 	jira "github.com/conductorone/go-jira/v2/onpremise"
@@ -15,9 +16,10 @@ import (
 )
 
 type Client struct {
-	BaseURL    string
-	client     *jira.Client
-	httpClient *uhttp.BaseHttpClient
+	BaseURL          string
+	client           *jira.Client
+	httpClient       *uhttp.BaseHttpClient
+	DefaultGroupName string
 }
 
 type JiraError struct {
@@ -92,9 +94,10 @@ const (
 	allPermissionSchemeV2 = "rest/api/2/permissionscheme"
 	addUserToGroup        = "rest/api/2/group/user"
 	NF                    = -1
+	maxMembersPerPage     = 50
 )
 
-func New(ctx context.Context, instanceURL, accessToken string) (*Client, error) {
+func New(ctx context.Context, instanceURL, accessToken string, defaultGroupName string) (*Client, error) {
 	l := ctxzap.Extract(ctx)
 	httpClient, err := uhttp.NewBearerAuth(accessToken).GetClient(ctx)
 	if err != nil {
@@ -114,9 +117,10 @@ func New(ctx context.Context, instanceURL, accessToken string) (*Client, error) 
 	}
 
 	return &Client{
-		BaseURL:    baseURL.String(),
-		client:     jiraClient,
-		httpClient: uhttp.NewBaseHttpClient(jiraClient.Client()),
+		BaseURL:          baseURL.String(),
+		client:           jiraClient,
+		httpClient:       uhttp.NewBaseHttpClient(jiraClient.Client()),
+		DefaultGroupName: defaultGroupName,
 	}, nil
 }
 
@@ -217,28 +221,31 @@ func (client *Client) ListAllPermissions(ctx context.Context) ([]Permission, err
 
 // ListAllUsers
 // Returns all users that are present in the Jira instance.
+// By default all users are assigned a group to get access to jira.
+// We get the complete list of users by fetching default group members.
 func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
-	var usersData []jira.User
-	endpointUrl, err := url.JoinPath(allUsersV3)
+	var allUsers []jira.User
+	defaultGroupName := client.DefaultGroupName
+	users, err := client.GetGroupMembers(ctx, defaultGroupName)
 	if err != nil {
 		return nil, err
 	}
 
-	req, endpointUrl, err := getRequest(ctx, client, endpointUrl, Query{
-		"username":   ".",
-		"maxResults": "10000",
-	})
-	if err != nil {
-		return nil, err
+	for _, user := range users {
+		jiraUser := jira.User{
+			Self:         user.Self,
+			Key:          user.Key,
+			Name:         user.Name,
+			EmailAddress: user.EmailAddress,
+			DisplayName:  user.DisplayName,
+			Active:       user.Active,
+			TimeZone:     user.TimeZone,
+			Locale:       "",
+		}
+		allUsers = append(allUsers, jiraUser)
 	}
 
-	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&usersData))
-	if err != nil {
-		return nil, getCustomError(err, resp, endpointUrl)
-	}
-
-	defer resp.Body.Close()
-	return usersData, err
+	return allUsers, nil
 }
 
 // ListAllGroups
@@ -246,6 +253,7 @@ func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
 func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 	var groupsData GroupsAPIData
 	req, endpointUrl, err := getRequest(ctx, client, allGroupsV2, Query{
+		// As per API documentation: The number of groups returned is limited by the system property "jira.ajax.autocomplete.limit".
 		"maxResults": "10000",
 	})
 	if err != nil {
@@ -264,21 +272,32 @@ func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 // GetGroupMembers
 // Returns all members that are present in a group.
 func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]GroupUser, error) {
+	var allMembers []GroupUser
 	var groupMembersAPIData GroupMembersAPIData
-	req, endpointUrl, err := getRequest(ctx, client, groupMembersV2, Query{
-		"groupname": groupName,
-	})
-	if err != nil {
-		return nil, err
-	}
+	startAt := 0
+	for {
+		req, endpointUrl, err := getRequest(ctx, client, groupMembersV2, Query{
+			"groupname": groupName,
+			"startAt":   strconv.Itoa(startAt),
+		})
+		if err != nil {
+			return nil, err
+		}
 
-	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&groupMembersAPIData))
-	if err != nil {
-		return nil, getCustomError(err, resp, endpointUrl)
-	}
+		resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&groupMembersAPIData))
+		if err != nil {
+			return nil, getCustomError(err, resp, endpointUrl)
+		}
 
-	defer resp.Body.Close()
-	return groupMembersAPIData.Users, err
+		defer resp.Body.Close()
+		allMembers = append(allMembers, groupMembersAPIData.Users...)
+		// If we've fetched all users, break the loop.
+		if len(groupMembersAPIData.Users) < maxMembersPerPage {
+			break
+		}
+		startAt = len(allMembers)
+	}
+	return allMembers, nil
 }
 
 // ListAllRoles
