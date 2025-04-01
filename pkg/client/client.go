@@ -93,7 +93,6 @@ const (
 	allPermissionSchemeV2 = "rest/api/2/permissionscheme"
 	addUserToGroup        = "rest/api/2/group/user"
 	NF                    = -1
-	maxMembersPerPage     = 50
 )
 
 func New(ctx context.Context, instanceURL, accessToken string, defaultGroupName string) (*Client, error) {
