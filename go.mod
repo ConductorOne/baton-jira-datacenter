@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/conductorone/baton-sdk v0.2.84
-	github.com/conductorone/go-jira/v2 v2.0.0-20240808231011-dc00f11d2470
+	github.com/conductorone/go-jira/v2 v2.0.0-20250328233613-c40bf74e4876
 	github.com/ennyjfrick/ruleguard-logfatal v0.0.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/quasilyte/go-ruleguard/dsl v0.3.22
@@ -75,7 +75,7 @@ require (
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/glebarez/go-sqlite v1.22.0 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
