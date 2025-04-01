@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"slices"
@@ -129,7 +128,7 @@ func IsUrl(str string) bool {
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
-func getRequest(ctx context.Context, cli *Client, apiUrl string, queryString map[string]string) (*http.Request, string, error) {
+func getRequest(ctx context.Context, cli *Client, apiUrl string, queryString map[string]string) (*http.Request, error) {
 	var (
 		endpointUrl string = apiUrl
 		err         error
@@ -137,13 +136,13 @@ func getRequest(ctx context.Context, cli *Client, apiUrl string, queryString map
 	if !IsUrl(apiUrl) {
 		endpointUrl, err = url.JoinPath(cli.BaseURL, apiUrl)
 		if err != nil {
-			return nil, "", err
+			return nil, err
 		}
 	}
 
 	uri, err := url.Parse(endpointUrl)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	if len(queryString) > 0 {
@@ -153,7 +152,6 @@ func getRequest(ctx context.Context, cli *Client, apiUrl string, queryString map
 		}
 
 		uri.RawQuery = q.Encode()
-		endpointUrl = endpointUrl + "?" + uri.RawQuery
 	}
 
 	req, err := cli.httpClient.NewRequest(ctx,
@@ -163,31 +161,10 @@ func getRequest(ctx context.Context, cli *Client, apiUrl string, queryString map
 		uhttp.WithContentTypeJSONHeader(),
 	)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	return req, endpointUrl, nil
-}
-
-func getCustomError(err error, resp *http.Response, endpointUrl string) *JiraError {
-	ce := &JiraError{
-		ErrorMessage:     err.Error(),
-		ErrorDescription: err.Error(),
-		ErrorLink:        endpointUrl,
-	}
-
-	if resp != nil {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			ce.ErrorSummary = fmt.Sprintf("Error reading response body %s", err.Error())
-			return ce
-		}
-
-		ce.ErrorCode = resp.StatusCode
-		ce.ErrorSummary = string(bodyBytes)
-	}
-
-	return ce
+	return req, nil
 }
 
 // ListAllPermissions
@@ -195,14 +172,14 @@ func getCustomError(err error, resp *http.Response, endpointUrl string) *JiraErr
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2-getAllPermissions
 func (client *Client) ListAllPermissions(ctx context.Context) ([]Permission, error) {
 	var permissionsData PermissionsAPIData
-	req, endpointUrl, err := getRequest(ctx, client, allPermissions, nil)
+	req, err := getRequest(ctx, client, allPermissions, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&permissionsData))
 	if err != nil {
-		return nil, getCustomError(err, resp, endpointUrl)
+		return nil, err
 	}
 
 	defer resp.Body.Close()
@@ -252,7 +229,7 @@ func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
 // Returns all groups that are present in the Jira instance.
 func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 	var groupsData GroupsAPIData
-	req, endpointUrl, err := getRequest(ctx, client, allGroupsV2, Query{
+	req, err := getRequest(ctx, client, allGroupsV2, Query{
 		// As per API documentation: The number of groups returned is limited by the system property "jira.ajax.autocomplete.limit".
 		"maxResults": "10000",
 	})
@@ -262,7 +239,7 @@ func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
 
 	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&groupsData))
 	if err != nil {
-		return nil, getCustomError(err, resp, endpointUrl)
+		return nil, err
 	}
 
 	defer resp.Body.Close()
@@ -276,7 +253,7 @@ func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]
 	var groupMembersAPIData GroupMembersAPIData
 	startAt := 0
 	for {
-		req, endpointUrl, err := getRequest(ctx, client, groupMembersV2, Query{
+		req, err := getRequest(ctx, client, groupMembersV2, Query{
 			"groupname": groupName,
 			"startAt":   strconv.Itoa(startAt),
 		})
@@ -286,13 +263,13 @@ func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]
 
 		resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&groupMembersAPIData))
 		if err != nil {
-			return nil, getCustomError(err, resp, endpointUrl)
+			return nil, err
 		}
 
 		defer resp.Body.Close()
 		allMembers = append(allMembers, groupMembersAPIData.Users...)
 		// If we've fetched all users, break the loop.
-		if len(groupMembersAPIData.Users) < maxMembersPerPage {
+		if groupMembersAPIData.IsLast || len(groupMembersAPIData.Users) == 0 {
 			break
 		}
 		startAt = len(allMembers)
@@ -304,14 +281,14 @@ func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]
 // Returns all roles that are present in the Jira instance.
 func (client *Client) ListAllRoles(ctx context.Context) ([]RolesAPIData, error) {
 	var rolesData []RolesAPIData
-	req, endpointUrl, err := getRequest(ctx, client, allRoles, nil)
+	req, err := getRequest(ctx, client, allRoles, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&rolesData))
 	if err != nil {
-		return nil, getCustomError(err, resp, endpointUrl)
+		return nil, err
 	}
 
 	defer resp.Body.Close()
@@ -322,7 +299,7 @@ func (client *Client) ListAllRoles(ctx context.Context) ([]RolesAPIData, error) 
 // Returns specific users.
 func (client *Client) GetUser(ctx context.Context, userName string) (jira.User, error) {
 	var usersAPIData []UsersAPIData
-	req, endpointUrl, err := getRequest(ctx, client, allUsersV2, Query{
+	req, err := getRequest(ctx, client, allUsersV2, Query{
 		"username": userName,
 	})
 	if err != nil {
@@ -331,7 +308,7 @@ func (client *Client) GetUser(ctx context.Context, userName string) (jira.User, 
 
 	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&usersAPIData))
 	if err != nil {
-		return jira.User{}, getCustomError(err, resp, endpointUrl)
+		return jira.User{}, err
 	}
 
 	defer resp.Body.Close()
@@ -363,14 +340,14 @@ func (client *Client) GetProjectRoles(ctx context.Context, projectId string) (ma
 		return nil, err
 	}
 
-	req, endpointUrl, err := getRequest(ctx, client, endpointUrl, nil)
+	req, err := getRequest(ctx, client, endpointUrl, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&projectRolesAPIData))
 	if err != nil {
-		return nil, getCustomError(err, resp, endpointUrl)
+		return nil, err
 	}
 
 	defer resp.Body.Close()
@@ -381,14 +358,14 @@ func (client *Client) GetProjectRoles(ctx context.Context, projectId string) (ma
 // Returns all role details that are present in specific project.
 func (client *Client) GetProjectRoleDetails(ctx context.Context, urlApi string) (RolesAPIData, error) {
 	var projectRoleDetailsAPIData RolesAPIData
-	req, endpointUrl, err := getRequest(ctx, client, urlApi, nil)
+	req, err := getRequest(ctx, client, urlApi, nil)
 	if err != nil {
 		return RolesAPIData{}, err
 	}
 
 	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&projectRoleDetailsAPIData))
 	if err != nil {
-		return RolesAPIData{}, getCustomError(err, resp, endpointUrl)
+		return RolesAPIData{}, err
 	}
 
 	defer resp.Body.Close()
@@ -404,14 +381,14 @@ func (client *Client) GetRole(ctx context.Context, roleId string) (RolesAPIData,
 		return rolesData, err
 	}
 
-	req, endpointUrl, err := getRequest(ctx, client, endpointUrl, nil)
+	req, err := getRequest(ctx, client, endpointUrl, nil)
 	if err != nil {
 		return RolesAPIData{}, err
 	}
 
 	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&rolesData))
 	if err != nil {
-		return RolesAPIData{}, getCustomError(err, resp, endpointUrl)
+		return RolesAPIData{}, err
 	}
 
 	defer resp.Body.Close()
@@ -422,14 +399,14 @@ func (client *Client) GetRole(ctx context.Context, roleId string) (RolesAPIData,
 // Return all group roles.
 func (client *Client) GetGroupRole(ctx context.Context) ([]Group, error) {
 	var groupRolesData GroupRolesAPIData
-	req, endpointUrl, err := getRequest(ctx, client, allGroupsV2, nil)
+	req, err := getRequest(ctx, client, allGroupsV2, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&groupRolesData))
 	if err != nil {
-		return nil, getCustomError(err, resp, endpointUrl)
+		return nil, err
 	}
 
 	defer resp.Body.Close()
@@ -443,7 +420,7 @@ func (client *Client) GetGroupLabelRoles(ctx context.Context, groupName string) 
 		groupRoleData GroupRolesAPIData
 		groupRoles    []Labels
 	)
-	req, endpointUrl, err := getRequest(ctx, client, allGroupsV2, Query{
+	req, err := getRequest(ctx, client, allGroupsV2, Query{
 		"query": "",
 	})
 	if err != nil {
@@ -452,7 +429,7 @@ func (client *Client) GetGroupLabelRoles(ctx context.Context, groupName string) 
 
 	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&groupRoleData))
 	if err != nil {
-		return nil, getCustomError(err, resp, endpointUrl)
+		return nil, err
 	}
 
 	defer resp.Body.Close()
@@ -467,7 +444,7 @@ func (client *Client) GetGroupLabelRoles(ctx context.Context, groupName string) 
 // Returns all permission schemes that are present in the Jira DC.
 func (client *Client) ListAllPermissionScheme(ctx context.Context) (PermissionSchemes, error) {
 	var permissionSchemesAPIData PermissionSchemesAPIData
-	req, endpointUrl, err := getRequest(ctx, client, allPermissionSchemeV2, Query{
+	req, err := getRequest(ctx, client, allPermissionSchemeV2, Query{
 		"expand": "permissions",
 	})
 	if err != nil {
@@ -476,7 +453,7 @@ func (client *Client) ListAllPermissionScheme(ctx context.Context) (PermissionSc
 
 	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&permissionSchemesAPIData))
 	if err != nil {
-		return PermissionSchemes{}, getCustomError(err, resp, endpointUrl)
+		return PermissionSchemes{}, err
 	}
 
 	defer resp.Body.Close()
@@ -485,19 +462,15 @@ func (client *Client) ListAllPermissionScheme(ctx context.Context) (PermissionSc
 }
 
 // post and delete requests.
-func getXRequest(ctx context.Context, cli *Client, method, apiUrl string, queryString map[string]string, body BodyActors) (*http.Request, string, error) {
-	var (
-		req     *http.Request
-		options []uhttp.RequestOption
-	)
-	endpointUrl, err := url.JoinPath(cli.BaseURL, apiUrl)
+func getXRequest(ctx context.Context, cli *Client, method, apiPath string, queryString map[string]string, body BodyActors) (*http.Request, error) {
+	endpointUrl, err := url.JoinPath(cli.BaseURL, apiPath)
 	if err != nil {
-		return req, "", err
+		return nil, err
 	}
 
 	uri, err := url.Parse(endpointUrl)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	if len(queryString) > 0 {
@@ -507,24 +480,25 @@ func getXRequest(ctx context.Context, cli *Client, method, apiUrl string, queryS
 		}
 
 		uri.RawQuery = q.Encode()
-		endpointUrl = endpointUrl + "?" + uri.RawQuery
 	}
 
-	options = append(options, uhttp.WithAcceptJSONHeader())
+	options := []uhttp.RequestOption{
+		uhttp.WithAcceptJSONHeader(),
+	}
 	if method != http.MethodDelete {
 		options = append(options, uhttp.WithJSONBody(body))
 	}
 
-	req, err = cli.httpClient.NewRequest(ctx,
+	req, err := cli.httpClient.NewRequest(ctx,
 		method,
 		uri,
 		options...,
 	)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	return req, endpointUrl, nil
+	return req, nil
 }
 
 // AddActorsToProjectRole
@@ -538,14 +512,14 @@ func (client *Client) AddActorsToProjectRole(ctx context.Context, projectId, rol
 		return actorsAPIData, err
 	}
 
-	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, endpointUrl, nil, body)
+	req, err := getXRequest(ctx, client, http.MethodPost, endpointUrl, nil, body)
 	if err != nil {
 		return ActorsAPIData{}, err
 	}
 
 	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&actorsAPIData))
 	if err != nil {
-		return ActorsAPIData{}, getCustomError(err, resp, endpointUrl)
+		return ActorsAPIData{}, err
 	}
 
 	defer resp.Body.Close()
@@ -561,7 +535,7 @@ func (client *Client) RemoveActorsFromProjectRole(ctx context.Context, projectId
 		return NF, err
 	}
 
-	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, endpointUrl, Query{
+	req, err := getXRequest(ctx, client, http.MethodDelete, endpointUrl, Query{
 		actor: actorName,
 	}, BodyActors{})
 	if err != nil {
@@ -570,7 +544,7 @@ func (client *Client) RemoveActorsFromProjectRole(ctx context.Context, projectId
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
-		return NF, getCustomError(err, resp, endpointUrl)
+		return NF, err
 	}
 
 	defer resp.Body.Close()
@@ -587,7 +561,7 @@ func (client *Client) AddUserToGroup(ctx context.Context, groupName, userName st
 		return NF, err
 	}
 
-	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, endpointUrl, Query{
+	req, err := getXRequest(ctx, client, http.MethodPost, endpointUrl, Query{
 		"groupname": groupName,
 	}, BodyActors{
 		Name: userName,
@@ -598,7 +572,7 @@ func (client *Client) AddUserToGroup(ctx context.Context, groupName, userName st
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
-		return NF, getCustomError(err, resp, endpointUrl)
+		return NF, err
 	}
 
 	defer resp.Body.Close()
@@ -617,7 +591,7 @@ func (client *Client) GetUserName(ctx context.Context, userId string) (string, e
 		return c.Key == userId
 	})
 
-	if userPos == NF {
+	if userPos == -1 {
 		return "", fmt.Errorf("user %s cannot be found", userId)
 	}
 
@@ -633,7 +607,7 @@ func (client *Client) RemoveUserFromGroup(ctx context.Context, groupName, userNa
 		return NF, err
 	}
 
-	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, endpointUrl, Query{
+	req, err := getXRequest(ctx, client, http.MethodDelete, endpointUrl, Query{
 		"groupname": groupName,
 		"username":  userName,
 	}, BodyActors{})
@@ -643,7 +617,7 @@ func (client *Client) RemoveUserFromGroup(ctx context.Context, groupName, userNa
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
-		return NF, getCustomError(err, resp, endpointUrl)
+		return NF, err
 	}
 
 	defer resp.Body.Close()
@@ -660,14 +634,14 @@ func (client *Client) AddProjectRoleActorsToRole(ctx context.Context, roleId str
 		return actorsAPIData, err
 	}
 
-	req, endpointUrl, err := getXRequest(ctx, client, http.MethodPost, endpointUrl, nil, body)
+	req, err := getXRequest(ctx, client, http.MethodPost, endpointUrl, nil, body)
 	if err != nil {
 		return ActorsAPIData{}, err
 	}
 
 	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&actorsAPIData))
 	if err != nil {
-		return ActorsAPIData{}, getCustomError(err, resp, endpointUrl)
+		return ActorsAPIData{}, err
 	}
 
 	defer resp.Body.Close()
@@ -683,7 +657,7 @@ func (client *Client) DeleteProjectRoleActorsFromRole(ctx context.Context, roleI
 		return NF, err
 	}
 
-	req, endpointUrl, err := getXRequest(ctx, client, http.MethodDelete, endpointUrl, Query{
+	req, err := getXRequest(ctx, client, http.MethodDelete, endpointUrl, Query{
 		actor: actorName,
 	}, BodyActors{})
 	if err != nil {
@@ -692,7 +666,7 @@ func (client *Client) DeleteProjectRoleActorsFromRole(ctx context.Context, roleI
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
-		return NF, getCustomError(err, resp, endpointUrl)
+		return NF, err
 	}
 
 	defer resp.Body.Close()
@@ -700,7 +674,7 @@ func (client *Client) DeleteProjectRoleActorsFromRole(ctx context.Context, roleI
 }
 
 func (client *Client) Myself(ctx context.Context) error {
-	req, _, err := getRequest(ctx, client, myself, nil)
+	req, err := getRequest(ctx, client, myself, nil)
 	if err != nil {
 		return err
 	}
