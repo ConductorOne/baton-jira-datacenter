@@ -420,7 +420,7 @@ func (client *Client) GetGroupLabelRoles(ctx context.Context, groupName string) 
 		groupRoles    []Labels
 	)
 	req, err := getRequest(ctx, client, allGroupsV2, Query{
-		"query": "",
+		"query": groupName,
 	})
 	if err != nil {
 		return nil, err
