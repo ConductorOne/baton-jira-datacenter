@@ -18,6 +18,8 @@ import (
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 )
 
+const _member = "member"
+
 type groupBuilder struct {
 	client *client.Client
 }
@@ -69,13 +71,20 @@ func (g *groupBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 }
 
 func (g *groupBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-	var rv []*v2.Entitlement
 	groupId := resource.Id.Resource
 	groupRoles, err := g.client.GetGroupLabelRoles(ctx, groupId)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
+	rv := make([]*v2.Entitlement, 0, len(groupRoles)+1)
+	rv = append(rv, ent.NewAssignmentEntitlement(
+		resource,
+		_member,
+		ent.WithGrantableTo(userResourceType),
+		ent.WithDisplayName(fmt.Sprintf("%s Group Member", resource.DisplayName)),
+		ent.WithDescription(fmt.Sprintf("member access to %s group in Jira DC", resource.DisplayName)),
+	))
 	for _, groupRole := range groupRoles {
 		permission := groupRole.Text
 		// create entitlements for each project role
@@ -130,6 +139,8 @@ func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 			membershipGrant := grant.NewGrant(resource, permission, ur.Id)
 			rv = append(rv, membershipGrant)
 		}
+
+		rv = append(rv, grant.NewGrant(resource, _member, ur.Id))
 	}
 	return rv, "", nil, nil
 }
