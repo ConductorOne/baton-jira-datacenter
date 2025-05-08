@@ -18,6 +18,8 @@ import (
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 )
 
+const _member = "member"
+
 type groupBuilder struct {
 	client *client.Client
 }
@@ -69,33 +71,34 @@ func (g *groupBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 }
 
 func (g *groupBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-	var rv []*v2.Entitlement
 	groupId := resource.Id.Resource
-	groupRoles, err := g.client.GetGroupRole(ctx)
+	groupRoles, err := g.client.GetGroupLabelRoles(ctx, groupId)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	for _, group := range groupRoles {
-		if group.Name != groupId {
-			continue
+	rv := make([]*v2.Entitlement, 0, len(groupRoles)+1)
+	rv = append(rv, ent.NewAssignmentEntitlement(
+		resource,
+		_member,
+		ent.WithGrantableTo(userResourceType),
+		ent.WithDisplayName(fmt.Sprintf("%s Group Member", resource.DisplayName)),
+		ent.WithDescription(fmt.Sprintf("member access to %s group in Jira DC", resource.DisplayName)),
+	))
+	for _, groupRole := range groupRoles {
+		permission := groupRole.Text
+		// create entitlements for each project role
+		permissionOptions := []ent.EntitlementOption{
+			ent.WithGrantableTo(userResourceType, groupResourceType),
+			ent.WithDisplayName(fmt.Sprintf("%s Group %s", resource.DisplayName, permission)),
+			ent.WithDescription(fmt.Sprintf("%s access to %s group in Jira DC", titleCase(permission), resource.DisplayName)),
 		}
 
-		for _, groupRole := range group.Labels {
-			permission := groupRole.Text
-			// create entitlements for each project role
-			permissionOptions := []ent.EntitlementOption{
-				ent.WithGrantableTo(userResourceType, groupResourceType),
-				ent.WithDisplayName(fmt.Sprintf("%s Group %s", resource.DisplayName, permission)),
-				ent.WithDescription(fmt.Sprintf("%s access to %s group in Jira DC", titleCase(permission), resource.DisplayName)),
-			}
-
-			rv = append(rv, ent.NewPermissionEntitlement(
-				resource,
-				permission,
-				permissionOptions...,
-			))
-		}
+		rv = append(rv, ent.NewPermissionEntitlement(
+			resource,
+			permission,
+			permissionOptions...,
+		))
 	}
 
 	return rv, "", nil, nil
@@ -111,33 +114,34 @@ func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 
 	l := ctxzap.Extract(ctx)
 
+	roles, err := g.client.GetGroupLabelRoles(ctx, groupId)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
 	for _, member := range groupMembers {
-		roles, err := g.client.GetGroupLabelRoles(ctx, groupId)
+		user, err := g.client.GetUser(ctx, member.Name)
+		if err != nil {
+			if errors.Is(err, client.ErrUserNotFound) {
+				l.Warn("User not found", zap.String("userId", member.Name))
+				continue
+			}
+			return nil, "", nil, err
+		}
+		ur, err := userResource(user)
 		if err != nil {
 			return nil, "", nil, err
 		}
 
 		for _, role := range roles {
 			permission := role.Text
-			user, err := g.client.GetUser(ctx, member.Name)
-			if err != nil {
-				if errors.Is(err, client.ErrUserNotFound) {
-					l.Warn("User not found", zap.String("userId", member.Name))
-					continue
-				}
-				return nil, "", nil, err
-			}
-
-			ur, err := userResource(user)
-			if err != nil {
-				return nil, "", nil, err
-			}
 
 			membershipGrant := grant.NewGrant(resource, permission, ur.Id)
 			rv = append(rv, membershipGrant)
 		}
-	}
 
+		rv = append(rv, grant.NewGrant(resource, _member, ur.Id))
+	}
 	return rv, "", nil, nil
 }
 
