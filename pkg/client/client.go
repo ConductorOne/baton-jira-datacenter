@@ -92,6 +92,7 @@ const (
 	allGroupsV2           = "rest/api/2/groups/picker"
 	allPermissionSchemeV2 = "rest/api/2/permissionscheme"
 	addUserToGroup        = "rest/api/2/group/user"
+	createUserPath        = "rest/api/2/user"
 	NF                    = -1
 )
 
@@ -683,4 +684,54 @@ func (client *Client) Myself(ctx context.Context) error {
 	}
 	defer resp.Body.Close()
 	return nil
+}
+
+// CreateUser creates a new user in Jira Datacenter
+// Returns the created user information.
+// https://developer.atlassian.com/server/jira/platform/rest/v2/api-group-user/#api-api-2-user-post
+func (client *Client) CreateUser(ctx context.Context, userRequest *CreateUserRequest) (*jira.User, error) {
+	var userData UsersAPIData
+
+	// Create the URL
+	endpointUrl, err := url.JoinPath(client.BaseURL, createUserPath)
+	if err != nil {
+		return nil, err
+	}
+
+	uri, err := url.Parse(endpointUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the request
+	req, err := client.httpClient.NewRequest(
+		ctx,
+		http.MethodPost,
+		uri,
+		uhttp.WithJSONBody(userRequest),
+		uhttp.WithAcceptJSONHeader(),
+		uhttp.WithContentTypeJSONHeader(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Make the request
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&userData))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Convert to jira.User format
+	return &jira.User{
+		Self:         userData.Self,
+		Key:          userData.Key,
+		Name:         userData.Name,
+		EmailAddress: userData.EmailAddress,
+		DisplayName:  userData.DisplayName,
+		Active:       userData.Active,
+		TimeZone:     userData.TimeZone,
+		Locale:       userData.Locale,
+	}, nil
 }

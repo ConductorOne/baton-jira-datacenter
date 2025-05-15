@@ -129,6 +129,14 @@ type BodyActors struct {
 	Name  string   `json:"name,omitempty"`
 }
 
+type CreateUserRequest struct {
+	Name         string `json:"name"`
+	Password     string `json:"password"`
+	EmailAddress string `json:"emailAddress"`
+	DisplayName  string `json:"displayName"`
+	Notification bool   `json:"notification,string"`
+}
+
 type ActorsAPIData struct {
 	Self        string   `json:"self,omitempty"`
 	Name        string   `json:"name,omitempty"`
