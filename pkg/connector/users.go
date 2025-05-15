@@ -149,7 +149,7 @@ func (u *userBuilder) CreateAccount(
 	l := ctxzap.Extract(ctx)
 
 	// Extract account information from the profile
-	profile := accountInfo.Profile.AsMap()
+	profile := accountInfo.GetProfile().AsMap()
 
 	// Get required fields
 	email, ok := profile["email"].(string)
