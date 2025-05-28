@@ -72,6 +72,16 @@ func (d *Connector) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error)
 					Placeholder: "Doe",
 					Order:       3,
 				},
+				"username": {
+					DisplayName: "Username",
+					Required:    false,
+					Description: "User's username (optional, defaults to email if not provided)",
+					Field: &v2.ConnectorAccountCreationSchema_Field_StringField{
+						StringField: &v2.ConnectorAccountCreationSchema_StringField{},
+					},
+					Placeholder: "john.doe",
+					Order:       4,
+				},
 			},
 		},
 	}, nil

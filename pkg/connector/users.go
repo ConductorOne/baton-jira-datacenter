@@ -24,7 +24,7 @@ type userBuilder struct {
 func userResource(u jira.User) (*v2.Resource, error) {
 	var (
 		userTraitOpts []sdkResource.UserTraitOption
-		userStatus    v2.UserTrait_Status_Status = v2.UserTrait_Status_STATUS_ENABLED
+		userStatus    = v2.UserTrait_Status_STATUS_ENABLED
 	)
 	firstName, lastName := splitFullName(u.DisplayName)
 	profile := map[string]interface{}{
@@ -160,6 +160,12 @@ func (u *userBuilder) CreateAccount(
 	firstName, _ := profile["first_name"].(string)
 	lastName, _ := profile["last_name"].(string)
 
+	// Try to get username from profile, fallback to email
+	username, hasUsername := profile["username"].(string)
+	if !hasUsername || username == "" {
+		username = email
+	}
+
 	// Create a display name from the first and last name
 	displayName := firstName
 	if lastName != "" {
@@ -170,9 +176,6 @@ func (u *userBuilder) CreateAccount(
 	if displayName == "" {
 		displayName = email
 	}
-
-	// Generate username from email (common practice in Jira)
-	username := email
 
 	// Generate a password if needed
 	var password string

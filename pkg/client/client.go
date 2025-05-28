@@ -130,7 +130,7 @@ func IsUrl(str string) bool {
 
 func getRequest(ctx context.Context, cli *Client, apiUrl string, queryString map[string]string) (*http.Request, error) {
 	var (
-		endpointUrl string = apiUrl
+		endpointUrl = apiUrl
 		err         error
 	)
 	if !IsUrl(apiUrl) {
