@@ -73,16 +73,27 @@ type Actors struct {
 }
 
 type UsersAPIData struct {
-	Self         string     `json:"self,omitempty"`
-	Key          string     `json:"key,omitempty"`
-	Name         string     `json:"name,omitempty"`
-	EmailAddress string     `json:"emailAddress,omitempty"`
-	AvatarUrls   AvatarUrls `json:"avatarUrls,omitempty"`
-	DisplayName  string     `json:"displayName,omitempty"`
-	Active       bool       `json:"active,omitempty"`
-	Deleted      bool       `json:"deleted,omitempty"`
-	TimeZone     string     `json:"timeZone,omitempty"`
-	Locale       string     `json:"locale,omitempty"`
+	Self         string          `json:"self,omitempty"`
+	Key          string          `json:"key,omitempty"`
+	Name         string          `json:"name,omitempty"`
+	EmailAddress string          `json:"emailAddress,omitempty"`
+	AvatarUrls   AvatarUrls      `json:"avatarUrls,omitempty"`
+	DisplayName  string          `json:"displayName,omitempty"`
+	Active       bool            `json:"active,omitempty"`
+	Deleted      bool            `json:"deleted,omitempty"`
+	TimeZone     string          `json:"timeZone,omitempty"`
+	Locale       string          `json:"locale,omitempty"`
+	Groups       *UserGroupsList `json:"groups,omitempty"`
+}
+
+type UserGroupsList struct {
+	Size  int         `json:"size,omitempty"`
+	Items []UserGroup `json:"items,omitempty"`
+}
+
+type UserGroup struct {
+	Name string `json:"name,omitempty"`
+	Self string `json:"self,omitempty"`
 }
 
 type GroupRolesAPIData struct {

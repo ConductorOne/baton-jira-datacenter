@@ -92,7 +92,7 @@ const (
 	allGroupsV2           = "rest/api/2/groups/picker"
 	allPermissionSchemeV2 = "rest/api/2/permissionscheme"
 	addUserToGroup        = "rest/api/2/group/user"
-	createUserPath        = "rest/api/2/user"
+	baseUserPath          = "rest/api/2/user"
 	NF                    = -1
 )
 
@@ -331,6 +331,26 @@ func (client *Client) GetUser(ctx context.Context, userName string) (jira.User, 
 	}, err
 }
 
+func (client *Client) GetUserByKey(ctx context.Context, userKey string) (*UsersAPIData, error) {
+	var userAPIData UsersAPIData
+	req, err := getRequest(ctx, client, baseUserPath, Query{
+		"key":    userKey,
+		"expand": "groups",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&userAPIData))
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	return &userAPIData, err
+}
+
 // GetProjectRoles
 // Returns all roles that are present in specific project.
 func (client *Client) GetProjectRoles(ctx context.Context, projectId string) (map[string]string, error) {
@@ -553,12 +573,12 @@ func (client *Client) RemoveActorsFromProjectRole(ctx context.Context, projectId
 
 // AddUserToGroup
 // Adds given user to a group in the Jira DC.
-// Returns the current state of the group.
+// Returns the true is the user was added successfully (status code = 201).
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/group-addUserToGroup
-func (client *Client) AddUserToGroup(ctx context.Context, groupName, userName string) (int, error) {
+func (client *Client) AddUserToGroup(ctx context.Context, groupName, userName string) (bool, error) {
 	endpointUrl, err := url.JoinPath(addUserToGroup)
 	if err != nil {
-		return NF, err
+		return false, err
 	}
 
 	req, err := getXRequest(ctx, client, http.MethodPost, endpointUrl, Query{
@@ -567,16 +587,16 @@ func (client *Client) AddUserToGroup(ctx context.Context, groupName, userName st
 		Name: userName,
 	})
 	if err != nil {
-		return NF, err
+		return false, err
 	}
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
-		return NF, err
+		return false, err
 	}
 
 	defer resp.Body.Close()
-	return resp.StatusCode, err
+	return resp.StatusCode == http.StatusCreated, err
 }
 
 // GetUserName
@@ -600,11 +620,12 @@ func (client *Client) GetUserName(ctx context.Context, userId string) (string, e
 
 // RemoveUserFromGroup
 // Removes given user from a group in the Jira DC.
+// Returns true if the user was successfully removed.
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/group-removeUserFromGroup
-func (client *Client) RemoveUserFromGroup(ctx context.Context, groupName, userName string) (int, error) {
+func (client *Client) RemoveUserFromGroup(ctx context.Context, groupName, userName string) (bool, error) {
 	endpointUrl, err := url.JoinPath(addUserToGroup)
 	if err != nil {
-		return NF, err
+		return false, err
 	}
 
 	req, err := getXRequest(ctx, client, http.MethodDelete, endpointUrl, Query{
@@ -612,16 +633,16 @@ func (client *Client) RemoveUserFromGroup(ctx context.Context, groupName, userNa
 		"username":  userName,
 	}, BodyActors{})
 	if err != nil {
-		return NF, err
+		return false, err
 	}
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
-		return NF, err
+		return false, err
 	}
 
 	defer resp.Body.Close()
-	return resp.StatusCode, err
+	return resp.StatusCode == http.StatusOK, err
 }
 
 // AddProjectRoleActorsToRole
@@ -693,7 +714,7 @@ func (client *Client) CreateUser(ctx context.Context, userRequest *CreateUserReq
 	var userData UsersAPIData
 
 	// Create the URL
-	endpointUrl, err := url.JoinPath(client.BaseURL, createUserPath)
+	endpointUrl, err := url.JoinPath(client.BaseURL, baseUserPath)
 	if err != nil {
 		return nil, err
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
@@ -163,25 +162,40 @@ func (g *groupBuilder) Grant(ctx context.Context, principal *v2.Resource, entitl
 
 	groupId := entitlement.Resource.Id.Resource
 	userId := principal.Id.Resource
-	userName, err := g.client.GetUserName(ctx, userId)
+	userInfo, err := g.client.GetUserByKey(ctx, userId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("jira(dc)-connector: error retrieving user %s: %w", userId, err)
 	}
 
-	statusCode, err := g.client.AddUserToGroup(ctx, groupId, userName)
+	// Check user's group membership
+	if userInfo.Groups != nil && userInfo.Groups.Size > 0 {
+		for _, group := range userInfo.Groups.Items {
+			if group.Name == groupId {
+				l.Debug("Group Membership already exists.",
+					zap.String("userId", userId),
+					zap.String("userName", userInfo.Name),
+					zap.String("group", groupId),
+				)
+				return annotations.New(&v2.GrantAlreadyExists{}), nil
+			}
+		}
+	}
+
+	succeded, err := g.client.AddUserToGroup(ctx, groupId, userInfo.Name)
 	err = getError(err)
 	if err != nil {
 		return nil, err
 	}
 
-	if statusCode == http.StatusCreated {
-		l.Warn("Group Membership has been created.",
-			zap.String("userId", userId),
-			zap.String("userName", userName),
-			zap.String("group", groupId),
-		)
+	if !succeded {
+		return nil, fmt.Errorf("jira(dc)-connector: failed when granting user to group %s", groupId)
 	}
 
+	l.Warn("Group Membership has been created.",
+		zap.String("userId", userId),
+		zap.String("userName", userInfo.Name),
+		zap.String("group", groupId),
+	)
 	return nil, nil
 }
 
@@ -207,25 +221,50 @@ func (g *groupBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations
 
 	groupId := projectResourceId.Resource
 	userId := principal.Id.Resource
-	userName, err := g.client.GetUserName(ctx, userId)
+	userInfo, err := g.client.GetUserByKey(ctx, userId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("jira(dc)-connector: error retrieving user %s: %w", userId, err)
 	}
 
-	statusCode, err := g.client.RemoveUserFromGroup(ctx, groupId, userName)
+	// Check user's group membership
+	membershipExists := false
+	if userInfo.Groups != nil && userInfo.Groups.Size > 0 {
+		for _, group := range userInfo.Groups.Items {
+			if group.Name == groupId {
+				membershipExists = true
+				break
+			}
+		}
+	}
+	if !membershipExists {
+		l.Debug("Group Membership already revoked.",
+			zap.String("userId", userId),
+			zap.String("userName", userInfo.Name),
+			zap.String("group", groupId),
+		)
+		return annotations.New(&v2.GrantAlreadyRevoked{}), nil
+	}
+
+	success, err := g.client.RemoveUserFromGroup(ctx, groupId, userInfo.Name)
 	err = getError(err)
 	if err != nil {
 		return nil, err
 	}
 
-	if statusCode == http.StatusOK {
-		l.Warn("Group Membership has been revoked.",
+	if !success {
+		l.Error("Failed to revoke Group Membership.",
 			zap.String("groupId", groupId),
 			zap.String("userId", userId),
-			zap.String("userName", userName),
+			zap.String("userName", userInfo.Name),
 		)
+		return nil, fmt.Errorf("jira(dc)-connector: failed when revoking user from group %s", groupId)
 	}
 
+	l.Warn("Group Membership has been revoked.",
+		zap.String("groupId", groupId),
+		zap.String("userId", userId),
+		zap.String("userName", userInfo.Name),
+	)
 	return nil, nil
 }
 func newGroupBuilder(client *client.Client) *groupBuilder {
