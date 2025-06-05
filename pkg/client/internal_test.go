@@ -258,9 +258,9 @@ func TestClientAddUserToGroup(t *testing.T) {
 	userName, err := client.GetUserName(ctx, "JIRAUSER10103")
 	assert.Nil(t, err)
 
-	statusCode, err := client.AddUserToGroup(ctx, "jira-administrators", userName)
+	success, err := client.AddUserToGroup(ctx, "jira-administrators", userName)
 	assert.Nil(t, err)
-	assert.Equal(t, http.StatusCreated, statusCode)
+	assert.True(t, success)
 }
 
 func TestClientRemoveUserFromGroup(t *testing.T) {
@@ -272,9 +272,9 @@ func TestClientRemoveUserFromGroup(t *testing.T) {
 	userName, err := client.GetUserName(ctx, "JIRAUSER10103")
 	assert.Nil(t, err)
 
-	statusCode, err := client.RemoveUserFromGroup(ctx, "jira-administrators", userName)
+	success, err := client.RemoveUserFromGroup(ctx, "jira-administrators", userName)
 	assert.Nil(t, err)
-	assert.Equal(t, http.StatusOK, statusCode)
+	assert.True(t, success)
 }
 
 func TestClientAddProjectRoleActorsToRoleWithGroup(t *testing.T) {
