@@ -147,7 +147,9 @@ func (u *userBuilder) CreateAccount(
 	credentialOptions *v2.CredentialOptions,
 ) (connectorbuilder.CreateAccountResponse, []*v2.PlaintextData, annotations.Annotations, error) {
 	l := ctxzap.Extract(ctx)
-
+	var resource *v2.Resource
+	var plaintextData []*v2.PlaintextData
+	createdAccount := true
 	// Extract account information from the profile
 	profile := accountInfo.GetProfile().AsMap()
 
@@ -157,77 +159,83 @@ func (u *userBuilder) CreateAccount(
 		return nil, nil, nil, fmt.Errorf("email is required")
 	}
 
-	firstName, _ := profile["first_name"].(string)
-	lastName, _ := profile["last_name"].(string)
-
 	// Try to get username from profile, fallback to email
 	username, hasUsername := profile["username"].(string)
 	if !hasUsername || username == "" {
 		username = email
 	}
 
-	// Create a display name from the first and last name
-	displayName := firstName
-	if lastName != "" {
-		displayName += " " + lastName
-	}
-
-	// If display name is empty, use email as display name
-	if displayName == "" {
-		displayName = email
-	}
-
-	// Generate a password if needed
-	var password string
-	var plaintextData []*v2.PlaintextData
-
-	if credentialOptions.GetRandomPassword() != nil {
-		// Generate a random password
-		length := int(credentialOptions.GetRandomPassword().GetLength())
-		if length <= 0 {
-			length = 12 // Default length
-		}
-
-		var err error
-		password, err = generateRandomPassword(length)
+	if existingUser, err := u.client.GetUser(ctx, email); err == nil {
+		l.Info("user already exists in Jira DC, returning existing user resource",
+			zap.String("email", email),
+			zap.String("user_id", existingUser.Key),
+		)
+		resource, err = userResource(existingUser)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to generate password: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed to create resource for existing user: %w", err)
+		}
+		createdAccount = false
+		username = existingUser.Name
+	} else {
+		firstName, _ := profile["first_name"].(string)
+		lastName, _ := profile["last_name"].(string)
+
+		// Create a display name from the first and last name
+		displayName := firstName
+		if lastName != "" {
+			displayName += " " + lastName
 		}
 
+		// If display name is empty, use email as display name
+		if displayName == "" {
+			displayName = email
+		}
+
+		// Generate a password if needed
+		var password string
+
+		password, err := createPassword(credentialOptions)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to create password: %w", err)
+		}
 		// Return the password as plaintext data
 		plaintextData = append(plaintextData, &v2.PlaintextData{
 			Name:        "password",
 			Description: "Generated password for the new account",
 			Bytes:       []byte(password),
 		})
-	} else {
-		return nil, nil, nil, fmt.Errorf("random password is required for Jira user creation")
-	}
 
-	// Create the user request
-	userRequest := &client.CreateUserRequest{
-		Name:         username,
-		Password:     password,
-		EmailAddress: email,
-		DisplayName:  displayName,
-		Notification: false, // Set to false to avoid sending notification emails
-	}
+		// Create the user request
+		userRequest := &client.CreateUserRequest{
+			Name:         username,
+			Password:     password,
+			EmailAddress: email,
+			DisplayName:  displayName,
+			Notification: false, // Set to false to avoid sending notification emails
+		}
 
-	// Call the API to create the user
-	user, err := u.client.CreateUser(ctx, userRequest)
-	if err != nil {
-		l.Error("failed to create user", zap.Error(err), zap.String("email", email))
-		return nil, nil, nil, fmt.Errorf("failed to create user: %w", err)
-	}
+		// Call the API to create the user
+		user, err := u.client.CreateUser(ctx, userRequest)
+		if err != nil {
+			l.Error("failed to create user", zap.Error(err), zap.String("email", email))
+			return nil, nil, nil, fmt.Errorf("failed to create user: %w", err)
+		}
 
-	l.Info("user created successfully",
-		zap.String("username", username),
-		zap.String("email", email),
-	)
+		l.Info("user created successfully",
+			zap.String("username", username),
+			zap.String("email", email),
+		)
+
+		// Create a resource from the new user
+		resource, err = userResource(*user)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to create resource for new user: %w", err)
+		}
+	}
 
 	// Add user to the default group if available
 	if u.client.DefaultGroupName != "" {
-		_, err = u.client.AddUserToGroup(ctx, u.client.DefaultGroupName, username)
+		_, err := u.client.AddUserToGroup(ctx, u.client.DefaultGroupName, username)
 		if err != nil {
 			l.Warn("failed to add user to default group",
 				zap.String("group", u.client.DefaultGroupName),
@@ -243,16 +251,29 @@ func (u *userBuilder) CreateAccount(
 		}
 	}
 
-	// Create a resource from the new user
-	resource, err := userResource(*user)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to create resource for new user: %w", err)
-	}
-
 	// Return success result with the new user resource
 	successResult := &v2.CreateAccountResponse_SuccessResult{
-		Resource: resource,
+		Resource:              resource,
+		IsCreateAccountResult: createdAccount,
 	}
 
 	return successResult, plaintextData, nil, nil
+}
+
+func createPassword(credentialOptions *v2.CredentialOptions) (string, error) {
+	if credentialOptions.GetRandomPassword() != nil {
+		// Generate a random password
+		length := int(credentialOptions.GetRandomPassword().GetLength())
+		if length <= 0 {
+			length = 12 // Default length
+		}
+
+		var err error
+		password, err := generateRandomPassword(length)
+		if err != nil {
+			return "", fmt.Errorf("failed to generate password: %w", err)
+		}
+		return password, nil
+	}
+	return "", fmt.Errorf("random password is required for Jira user creation")
 }
