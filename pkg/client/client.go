@@ -575,7 +575,7 @@ func (client *Client) RemoveActorsFromProjectRole(ctx context.Context, projectId
 // Adds given user to a group in the Jira DC.
 // Returns the true is the user was added successfully (status code = 201).
 // https://docs.atlassian.com/software/jira/docs/api/REST/9.14.0/#api/2/group-addUserToGroup
-func (client *Client) AddUserToGroup(ctx context.Context, groupName, userName string) (bool, error) {
+func (client *Client) AddUserToGroup(ctx context.Context, groupName string, userName string) (bool, error) {
 	endpointUrl, err := url.JoinPath(addUserToGroup)
 	if err != nil {
 		return false, err
