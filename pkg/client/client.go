@@ -386,6 +386,27 @@ func (client *Client) GetProjectRoles(ctx context.Context, projectId string) (ma
 	return projectRolesAPIData, err
 }
 
+func (client *Client) GetProjectRoleDetailsById(ctx context.Context, projectId string, roleId string) (*RolesAPIData, error) {
+	var projectRoleDetailsAPIData RolesAPIData
+	endpointUrl, err := url.JoinPath(allProjects, projectId, "role", roleId)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := getRequest(ctx, client, endpointUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&projectRoleDetailsAPIData))
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	return &projectRoleDetailsAPIData, err
+}
+
 // GetProjectRoleDetails
 // Returns all role details that are present in specific project.
 func (client *Client) GetProjectRoleDetails(ctx context.Context, urlApi string) (RolesAPIData, error) {
