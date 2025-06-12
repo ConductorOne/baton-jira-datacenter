@@ -213,6 +213,22 @@ func (p *projectBuilder) Grant(ctx context.Context, principal *v2.Resource, enti
 			return nil, err
 		}
 
+		// // Verify the user is not already a member of the project role
+		roleDetails, err := p.client.GetProjectRoleDetailsById(ctx, projectId, roleId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch role details, %w", err)
+		}
+		for _, actor := range roleDetails.Actors {
+			if actor.Name == userName {
+				l.Debug("Project Membership already exists.",
+					zap.String("userName", userName),
+					zap.String("projectId", projectId),
+					zap.String("roleId", roleId),
+				)
+				return annotations.New(&v2.GrantAlreadyExists{}), nil
+			}
+		}
+
 		body := client.BodyActors{
 			User: []string{
 				userName,

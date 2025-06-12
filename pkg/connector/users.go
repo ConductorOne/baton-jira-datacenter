@@ -165,7 +165,18 @@ func (u *userBuilder) CreateAccount(
 		username = email
 	}
 
-	if existingUser, err := u.client.GetUser(ctx, email); err == nil {
+	existingUser, err := u.client.GetUser(ctx, username)
+	if err != nil && username != email {
+		// If the username is not found, try to get the user by email
+		l.Debug("username not found, attempting to get user by email",
+			zap.String("username", username),
+			zap.String("email", email),
+			zap.Error(err),
+		)
+		existingUser, err = u.client.GetUser(ctx, email)
+	}
+
+	if err == nil {
 		l.Info("user already exists in Jira DC, returning existing user resource",
 			zap.String("email", email),
 			zap.String("user_id", existingUser.Key),
@@ -177,6 +188,11 @@ func (u *userBuilder) CreateAccount(
 		createdAccount = false
 		username = existingUser.Name
 	} else {
+		l.Debug("user does not exist in Jira DC, creating new user",
+			zap.String("email", email),
+			zap.String("username", username),
+			zap.Error(err),
+		)
 		firstName, _ := profile["first_name"].(string)
 		lastName, _ := profile["last_name"].(string)
 
