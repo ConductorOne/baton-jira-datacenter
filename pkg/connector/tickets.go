@@ -169,7 +169,7 @@ func (d *Connector) ListTicketSchemas(ctx context.Context, pToken *pagination.To
 		projectKeyMap[str] = true
 	}
 
-	projects, err := d.jiraClient.ListProjects(ctx)
+	projects, err := d.jiraClient.ListProjectsWithDetails(ctx)
 	if err != nil {
 		return nil, "", nil, err
 	}

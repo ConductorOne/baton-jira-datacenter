@@ -80,29 +80,18 @@ func (r *permissionBuilder) List(ctx context.Context, parentResourceID *v2.Resou
 func (r *permissionBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	var rv []*v2.Entitlement
 	permissionId := resource.DisplayName
-	permissions, err := r.client.ListAllPermissionScheme(ctx)
-	if err != nil {
-		return nil, "", nil, err
+
+	permissionOptions := []ent.EntitlementOption{
+		ent.WithGrantableTo(userResourceType, groupResourceType),
+		ent.WithDisplayName(fmt.Sprintf("%s Permission %s", resource.DisplayName, permissionId)),
+		ent.WithDescription(fmt.Sprintf("%s access to %s permission in Jira DC", titleCase(permissionId), permissionId)),
 	}
 
-	for _, permission := range permissions.Permissions {
-		if permissionId != permission.Permission {
-			continue
-		}
-
-		// create entitlements for each project role
-		permissionOptions := []ent.EntitlementOption{
-			ent.WithGrantableTo(userResourceType, groupResourceType),
-			ent.WithDisplayName(fmt.Sprintf("%s Permission %s", resource.DisplayName, permission.Permission)),
-			ent.WithDescription(fmt.Sprintf("%s access to %s permission in Jira DC", titleCase(permission.Permission), resource.DisplayName)),
-		}
-
-		rv = append(rv, ent.NewPermissionEntitlement(
-			resource,
-			permission.Permission,
-			permissionOptions...,
-		))
-	}
+	rv = append(rv, ent.NewPermissionEntitlement(
+		resource,
+		permissionId,
+		permissionOptions...,
+	))
 
 	return rv, "", nil, nil
 }

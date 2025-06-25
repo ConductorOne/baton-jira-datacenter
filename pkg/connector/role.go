@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
@@ -16,6 +15,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 )
@@ -26,15 +26,52 @@ type roleBuilder struct {
 
 const NF = -1
 
+func extractActorsFromRoleProfile(profile *structpb.Struct) []client.Actors {
+	if profile == nil {
+		return nil
+	}
+	field, ok := profile.Fields["actors"]
+	if !ok || field.GetListValue() == nil {
+		return nil
+	}
+	var actors []client.Actors
+	for _, val := range field.GetListValue().Values {
+		m := val.GetStructValue()
+		if m == nil {
+			continue
+		}
+
+		a := client.Actors{
+			ID:          int(m.Fields["id"].GetNumberValue()),
+			DisplayName: m.Fields["displayName"].GetStringValue(),
+			Type:        m.Fields["type"].GetStringValue(),
+			Name:        m.Fields["name"].GetStringValue(),
+		}
+		actors = append(actors, a)
+	}
+	return actors
+}
+
 // Create a new connector resource for a jira role.
 func roleResource(ctx context.Context, role client.RolesAPIData, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
-	profile := map[string]interface{}{
+	profile := map[string]any{
 		"role_id":          role.ID,
 		"role_name":        role.Name,
 		"role_Description": role.Description,
 	}
 
-	groupTraitOptions := []sdkResource.GroupTraitOption{
+	var actorsList []any
+	for _, a := range role.Actors {
+		actorsList = append(actorsList, map[string]any{
+			"id":          a.ID,
+			"displayName": a.DisplayName,
+			"type":        a.Type,
+			"name":        a.Name,
+		})
+	}
+	profile["actors"] = actorsList
+
+	roleTraitOptions := []sdkResource.GroupTraitOption{
 		sdkResource.WithGroupProfile(profile),
 	}
 
@@ -42,7 +79,7 @@ func roleResource(ctx context.Context, role client.RolesAPIData, parentResourceI
 		role.Name,
 		roleResourceType,
 		role.ID,
-		groupTraitOptions,
+		roleTraitOptions,
 		sdkResource.WithParentResourceID(parentResourceID),
 	)
 	if err != nil {
@@ -61,6 +98,7 @@ func (r *roleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 func (r *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	var ret []*v2.Resource
 	roles, err := r.client.ListAllRoles(ctx)
+
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -105,57 +143,57 @@ func (r *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _
 
 func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	var rv []*v2.Grant
-	// List roles in general
-	roles, err := r.client.ListAllRoles(ctx)
-	if err != nil {
-		return nil, "", nil, err
-	}
-
-	roleId, err := strconv.Atoi(resource.Id.Resource)
-	if err != nil {
-		return nil, "", nil, err
-	}
 
 	l := ctxzap.Extract(ctx)
 
-	for _, role := range roles {
-		if roleId != role.ID {
-			continue
+	roleTrait, err := sdkResource.GetGroupTrait(resource)
+	if err != nil {
+		return nil, "", nil, fmt.Errorf("list-grants: failed to get group trait from role: %w", err)
+	}
+	roleProfile := roleTrait.GetProfile()
+
+	roleActors := extractActorsFromRoleProfile(roleProfile)
+
+	if roleActors == nil {
+		role, err := r.client.GetRole(ctx, resource.Id.Resource)
+		if err != nil {
+			return nil, "", nil, err
 		}
-		// An actor can be (users or groups)
-		for _, actor := range role.Actors {
-			switch actor.Type {
-			case userRole:
-				user, err := r.client.GetUser(ctx, actor.Name)
-				if err != nil {
-					if errors.Is(err, client.ErrUserNotFound) {
-						l.Warn("User not found", zap.String("userId", actor.Name))
-						continue
-					}
-					return nil, "", nil, err
-				}
+		roleActors = role.Actors
+	}
 
-				ur, err := userResource(user)
-				if err != nil {
-					return nil, "", nil, err
+	for _, actor := range roleActors {
+		switch actor.Type {
+		case userRole:
+			user, err := r.client.GetUser(ctx, actor.Name)
+			if err != nil {
+				if errors.Is(err, client.ErrUserNotFound) {
+					l.Warn("User not found", zap.String("userId", actor.Name))
+					continue
 				}
-
-				membershipGrant := grant.NewGrant(resource, role.Name, ur.Id)
-				rv = append(rv, membershipGrant)
-			case groupRole:
-				group := client.Group{
-					Name: actor.Name,
-				}
-				gr, err := groupResource(ctx, group, nil)
-				if err != nil {
-					return nil, "", nil, err
-				}
-
-				membershipGrant := grant.NewGrant(resource, role.Name, gr.Id)
-				rv = append(rv, membershipGrant)
-			default:
-				return nil, "", nil, fmt.Errorf("jira(dc)-connector: invalid member resource type: %s", actor.Type)
+				return nil, "", nil, err
 			}
+
+			ur, err := userResource(user)
+			if err != nil {
+				return nil, "", nil, err
+			}
+
+			membershipGrant := grant.NewGrant(resource, resource.DisplayName, ur.Id)
+			rv = append(rv, membershipGrant)
+		case groupRole:
+			group := client.Group{
+				Name: actor.Name,
+			}
+			gr, err := groupResource(ctx, group, nil)
+			if err != nil {
+				return nil, "", nil, err
+			}
+
+			membershipGrant := grant.NewGrant(resource, resource.DisplayName, gr.Id)
+			rv = append(rv, membershipGrant)
+		default:
+			return nil, "", nil, fmt.Errorf("jira(dc)-connector: invalid member resource type: %s", actor.Type)
 		}
 	}
 

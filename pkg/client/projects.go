@@ -25,6 +25,27 @@ func (c *Client) GetProject(ctx context.Context, projectID string) (*jira.Projec
 	return project, nil
 }
 
+func (c *Client) ListProjectsWithDetails(ctx context.Context) ([]*jira.Project, error) {
+	l := ctxzap.Extract(ctx)
+
+	projects, _, err := c.client.Project.GetAll(ctx, nil)
+	if err != nil {
+		l.Error("Error getting projects with details", zap.Error(err))
+		return nil, err
+	}
+
+	var ret []*jira.Project
+	for _, i := range *projects {
+		p, err := c.GetProject(ctx, i.ID)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, p)
+	}
+
+	return ret, nil
+}
+
 func (c *Client) ListProjects(ctx context.Context) ([]*jira.Project, error) {
 	l := ctxzap.Extract(ctx)
 
@@ -36,9 +57,11 @@ func (c *Client) ListProjects(ctx context.Context) ([]*jira.Project, error) {
 
 	var ret []*jira.Project
 	for _, i := range *projects {
-		p, err := c.GetProject(ctx, i.ID)
-		if err != nil {
-			return nil, err
+		p := &jira.Project{
+			Self: i.Self,
+			ID:   i.ID,
+			Key:  i.Key,
+			Name: i.Name,
 		}
 		ret = append(ret, p)
 	}
