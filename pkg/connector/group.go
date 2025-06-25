@@ -110,7 +110,7 @@ func (g *groupBuilder) Entitlements(ctx context.Context, resource *v2.Resource, 
 
 	groupTrait, err := sdkResource.GetGroupTrait(resource)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("Failed to get group trait from group: %w", err)
+		return nil, "", nil, fmt.Errorf("list-entitlements: Failed to get group trait from group: %w", err)
 	}
 	groupProfile := groupTrait.GetProfile()
 
@@ -161,7 +161,7 @@ func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 
 	groupTrait, err := sdkResource.GetGroupTrait(resource)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("Failed to get group trait from group: %w", err)
+		return nil, "", nil, fmt.Errorf("list-grants: failed to get group trait from group: %w", err)
 	}
 	groupProfile := groupTrait.GetProfile()
 

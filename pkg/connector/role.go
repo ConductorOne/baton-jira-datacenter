@@ -148,7 +148,7 @@ func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 
 	roleTrait, err := sdkResource.GetGroupTrait(resource)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("Failed to get group trait from role: %w", err)
+		return nil, "", nil, fmt.Errorf("list-grants: failed to get group trait from role: %w", err)
 	}
 	roleProfile := roleTrait.GetProfile()
 
