@@ -13,6 +13,7 @@ import (
 	sdkResource "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 )
@@ -27,12 +28,47 @@ func (g *groupBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 	return groupResourceType
 }
 
+func extractGroupLabelRolesFromGroupProfile(profile *structpb.Struct) []client.Labels {
+	if profile == nil {
+		return nil
+	}
+	field, ok := profile.Fields["group_label_roles"]
+	if !ok || field.GetListValue() == nil {
+		return nil
+	}
+	var actors []client.Labels
+	for _, val := range field.GetListValue().Values {
+		m := val.GetStructValue()
+		if m == nil {
+			continue
+		}
+		gl := client.Labels{
+			Text:  m.Fields["text"].GetStringValue(),
+			Type:  m.Fields["type"].GetStringValue(),
+			Title: m.Fields["title"].GetStringValue(),
+		}
+		actors = append(actors, gl)
+	}
+	return actors
+}
+
 func groupResource(ctx context.Context, group client.Group, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	// jira groups does not include ids only names
 	profile := map[string]interface{}{
 		"group_name": group.Name,
 		"group_id":   group.Name,
 	}
+
+	var groupLabelRoles []any
+	for _, gl := range group.Labels {
+		groupLabelRoles = append(groupLabelRoles, map[string]any{
+			"text":  gl.Text,
+			"title": gl.Title,
+			"type":  gl.Type,
+		})
+	}
+	profile["group_label_roles"] = groupLabelRoles
+
 	groupTraitOptions := []sdkResource.GroupTraitOption{sdkResource.WithGroupProfile(profile)}
 	resource, err := sdkResource.NewGroupResource(
 		group.Name,
@@ -71,9 +107,19 @@ func (g *groupBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 
 func (g *groupBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	groupId := resource.Id.Resource
-	groupRoles, err := g.client.GetGroupLabelRoles(ctx, groupId)
+
+	groupTrait, err := sdkResource.GetGroupTrait(resource)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, fmt.Errorf("Failed to get group trait from group: %w", err)
+	}
+	groupProfile := groupTrait.GetProfile()
+
+	groupRoles := extractGroupLabelRolesFromGroupProfile(groupProfile)
+	if groupRoles == nil {
+		groupRoles, err = g.client.GetGroupLabelRoles(ctx, groupId)
+		if err != nil {
+			return nil, "", nil, err
+		}
 	}
 
 	rv := make([]*v2.Entitlement, 0, len(groupRoles)+1)
@@ -113,9 +159,18 @@ func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 
 	l := ctxzap.Extract(ctx)
 
-	roles, err := g.client.GetGroupLabelRoles(ctx, groupId)
+	groupTrait, err := sdkResource.GetGroupTrait(resource)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, fmt.Errorf("Failed to get group trait from group: %w", err)
+	}
+	groupProfile := groupTrait.GetProfile()
+
+	roles := extractGroupLabelRolesFromGroupProfile(groupProfile)
+	if roles == nil {
+		roles, err = g.client.GetGroupLabelRoles(ctx, groupId)
+		if err != nil {
+			return nil, "", nil, err
+		}
 	}
 
 	for _, member := range groupMembers {

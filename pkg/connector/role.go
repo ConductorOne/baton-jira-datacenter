@@ -98,7 +98,6 @@ func (r *roleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 func (r *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	var ret []*v2.Resource
 	roles, err := r.client.ListAllRoles(ctx)
-	l := ctxzap.Extract(ctx)
 
 	if err != nil {
 		return nil, "", nil, err
