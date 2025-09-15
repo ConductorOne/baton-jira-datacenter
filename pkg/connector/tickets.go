@@ -266,7 +266,7 @@ func (d *Connector) getCustomFieldsForIssueType(ctx context.Context, projectId s
 					displayName = choice.Value
 				}
 				allowedValues = append(allowedValues, &v2.TicketCustomFieldObjectValue{
-					Id:          choice.Id,
+					Id:          string(choice.Id),
 					DisplayName: displayName,
 				})
 			}
