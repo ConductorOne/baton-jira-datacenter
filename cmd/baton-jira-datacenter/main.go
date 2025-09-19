@@ -21,7 +21,7 @@ var version = "dev"
 func main() {
 	ctx := context.Background()
 
-	_, cmd, err := configschema.DefineConfiguration(ctx, "baton-jira-datacenter", getConnector, field.NewConfiguration(configurationFields, configRelations...))
+	_, cmd, err := configschema.DefineConfiguration(ctx, "baton-jira-datacenter", getConnector, field.NewConfiguration(configurationFields, field.WithConstraints(configRelations...)))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
