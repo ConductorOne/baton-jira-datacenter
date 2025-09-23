@@ -94,7 +94,7 @@ const (
 	addUserToGroup        = "rest/api/2/group/user"
 	baseUserPath          = "rest/api/2/user"
 	NF                    = -1
-	maxMembersPerPage     = 50
+	maxMembersPerPage     = 50 // This is the max the group member api returns
 )
 
 func New(ctx context.Context, instanceURL, accessToken string, defaultGroupName string) (*Client, error) {
@@ -318,8 +318,9 @@ func (client *Client) GetGroupMembersPaginated(ctx context.Context, groupName st
 		return nil, "", err
 	}
 	req, err := getRequest(ctx, client, groupMembersV2, Query{
-		"groupname": groupName,
-		"startAt":   strconv.Itoa(startAt),
+		"groupname":  groupName,
+		"startAt":    strconv.Itoa(startAt),
+		"maxResults": strconv.Itoa(maxMembersPerPage),
 	})
 	if err != nil {
 		return nil, "", err
