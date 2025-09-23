@@ -49,21 +49,18 @@ jobs:
       CONNECTOR_PRINCIPAL: 'JIRAUSER10102'
       CONNECTOR_PRINCIPAL_TYPE: 'user'
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.25.x
-      - name: Checkout code
-        uses: actions/checkout@v4
+          go-version-file: go.mod
 
       - name: Run Docker Compose as a Daemon (to start postgres and jira)
         run: docker compose -f ./docker-compose.yml up --detach
 
       - name: Build baton-jira-datacenter
         run: go build ./cmd/baton-jira-datacenter
-
-      - name: Install baton
-        run: ./scripts/get-baton.sh && mv baton /usr/local/bin
 
       - name: Wait for Jira to finish starting up
         uses: nick-fields/retry@v3

@@ -2,14 +2,13 @@ package connector
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
-	"math/big"
 
 	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
+	"github.com/conductorone/baton-sdk/pkg/crypto"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	sdkResource "github.com/conductorone/baton-sdk/pkg/types/resource"
 	jira "github.com/conductorone/go-jira/v2/onpremise"
@@ -20,6 +19,8 @@ import (
 type userBuilder struct {
 	client *client.Client
 }
+
+var _ connectorbuilder.AccountManager = &userBuilder{}
 
 func userResource(u jira.User) (*v2.Resource, error) {
 	var (
@@ -121,30 +122,11 @@ func (u *userBuilder) CreateAccountCapabilityDetails(ctx context.Context) (*v2.C
 	}, nil, nil
 }
 
-// generateRandomPassword creates a secure random password for new user accounts.
-func generateRandomPassword(length int) (string, error) {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]"
-	if length < 8 {
-		length = 8 // Jira typically requires at least 8 characters
-	}
-
-	password := make([]byte, length)
-	for i := 0; i < length; i++ {
-		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
-		if err != nil {
-			return "", err
-		}
-		password[i] = charset[n.Int64()]
-	}
-
-	return string(password), nil
-}
-
 // CreateAccount provisions a new user in Jira Datacenter.
 func (u *userBuilder) CreateAccount(
 	ctx context.Context,
 	accountInfo *v2.AccountInfo,
-	credentialOptions *v2.CredentialOptions,
+	credentialOptions *v2.LocalCredentialOptions,
 ) (connectorbuilder.CreateAccountResponse, []*v2.PlaintextData, annotations.Annotations, error) {
 	l := ctxzap.Extract(ctx)
 	var resource *v2.Resource
@@ -207,10 +189,7 @@ func (u *userBuilder) CreateAccount(
 			displayName = email
 		}
 
-		// Generate a password if needed
-		var password string
-
-		password, err := createPassword(credentialOptions)
+		password, err := crypto.GeneratePassword(ctx, credentialOptions)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to create password: %w", err)
 		}
@@ -274,22 +253,4 @@ func (u *userBuilder) CreateAccount(
 	}
 
 	return successResult, plaintextData, nil, nil
-}
-
-func createPassword(credentialOptions *v2.CredentialOptions) (string, error) {
-	if credentialOptions.GetRandomPassword() != nil {
-		// Generate a random password
-		length := int(credentialOptions.GetRandomPassword().GetLength())
-		if length <= 0 {
-			length = 12 // Default length
-		}
-
-		var err error
-		password, err := generateRandomPassword(length)
-		if err != nil {
-			return "", fmt.Errorf("failed to generate password: %w", err)
-		}
-		return password, nil
-	}
-	return "", fmt.Errorf("random password is required for Jira user creation")
 }
