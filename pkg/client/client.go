@@ -94,6 +94,7 @@ const (
 	addUserToGroup        = "rest/api/2/group/user"
 	baseUserPath          = "rest/api/2/user"
 	NF                    = -1
+	maxMembersPerPage     = 50 // This is the max the group member api returns
 )
 
 func New(ctx context.Context, instanceURL, accessToken string, defaultGroupName string) (*Client, error) {
@@ -225,6 +226,31 @@ func (client *Client) ListAllUsers(ctx context.Context) ([]jira.User, error) {
 	return allUsers, nil
 }
 
+func (client *Client) ListUsersPaginated(ctx context.Context, pageToken string) ([]jira.User, string, error) {
+	var allUsers []jira.User
+	defaultGroupName := client.DefaultGroupName
+	users, nextToken, err := client.GetGroupMembersPaginated(ctx, defaultGroupName, pageToken)
+	if err != nil {
+		return nil, "", err
+	}
+
+	for _, user := range users {
+		jiraUser := jira.User{
+			Self:         user.Self,
+			Key:          user.Key,
+			Name:         user.Name,
+			EmailAddress: user.EmailAddress,
+			DisplayName:  user.DisplayName,
+			Active:       user.Active,
+			TimeZone:     user.TimeZone,
+			Locale:       "",
+		}
+		allUsers = append(allUsers, jiraUser)
+	}
+
+	return allUsers, nextToken, nil
+}
+
 // ListAllGroups
 // Returns all groups that are present in the Jira instance.
 func (client *Client) ListAllGroups(ctx context.Context) ([]Group, error) {
@@ -275,6 +301,46 @@ func (client *Client) GetGroupMembers(ctx context.Context, groupName string) ([]
 		startAt = len(allMembers)
 	}
 	return allMembers, nil
+}
+
+func ConvertPageToken(token string) (int, error) {
+	if token == "" {
+		return 0, nil
+	}
+	return strconv.Atoi(token)
+}
+
+func (client *Client) GetGroupMembersPaginated(ctx context.Context, groupName string, pageToken string) ([]GroupUser, string, error) {
+	var allMembers []GroupUser
+	var groupMembersAPIData GroupMembersAPIData
+	startAt, err := ConvertPageToken(pageToken)
+	if err != nil {
+		return nil, "", err
+	}
+	req, err := getRequest(ctx, client, groupMembersV2, Query{
+		"groupname":  groupName,
+		"startAt":    strconv.Itoa(startAt),
+		"maxResults": strconv.Itoa(maxMembersPerPage),
+	})
+	if err != nil {
+		return nil, "", err
+	}
+
+	resp, err := client.httpClient.Do(req, uhttp.WithJSONResponse(&groupMembersAPIData))
+	if err != nil {
+		return nil, "", err
+	}
+
+	defer resp.Body.Close()
+	allMembers = append(allMembers, groupMembersAPIData.Users...)
+
+	if groupMembersAPIData.IsLast || len(groupMembersAPIData.Users) == 0 {
+		return allMembers, "", nil
+	} else {
+		startAt += maxMembersPerPage
+		nextPage := strconv.Itoa(startAt)
+		return allMembers, nextPage, nil
+	}
 }
 
 // ListAllRoles

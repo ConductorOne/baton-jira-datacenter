@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	sdkResource "github.com/conductorone/baton-sdk/pkg/types/resource"
-
-	"github.com/conductorone/baton-jira-datacenter/pkg/client"
 )
 
 type permissionBuilder struct {
@@ -20,16 +19,26 @@ type permissionBuilder struct {
 }
 
 // Create a new connector resource for a jira role.
-func permissionResource(ctx context.Context, permission client.Permission, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
+func permissionResource(ctx context.Context, permission client.Permission, permissionHolderParam string, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
+	roleId, _ := strconv.Atoi(permissionHolderParam)
 	profile := map[string]interface{}{
-		"permission_id":          permission.Key,
-		"permission_name":        permission.Name,
-		"permission_type":        permission.Type,
-		"permission_description": permission.Description,
+		"permission_id":               permission.Key,
+		"permission_name":             permission.Name,
+		"permission_type":             permission.Type,
+		"permission_description":      permission.Description,
+		"permission_holder_parameter": roleId,
 	}
 
 	groupTraitOptions := []sdkResource.GroupTraitOption{
 		sdkResource.WithGroupProfile(profile),
+	}
+
+	resourceTraitOptions := []sdkResource.ResourceOption{sdkResource.WithParentResourceID(parentResourceID)}
+
+	// We add the skip grants annotation to optimize the behavior of the Grants method
+	// Which continues when permission type is not projectRole
+	if permission.Type != "projectRole" {
+		resourceTraitOptions = append(resourceTraitOptions, sdkResource.WithAnnotation(&v2.SkipGrants{}))
 	}
 
 	ret, err := sdkResource.NewGroupResource(
@@ -37,7 +46,7 @@ func permissionResource(ctx context.Context, permission client.Permission, paren
 		permissionResourceType,
 		permission.Key,
 		groupTraitOptions,
-		sdkResource.WithParentResourceID(parentResourceID),
+		resourceTraitOptions...,
 	)
 	if err != nil {
 		return nil, err
@@ -60,17 +69,17 @@ func (r *permissionBuilder) List(ctx context.Context, parentResourceID *v2.Resou
 	}
 
 	for _, permission := range permissions.Permissions {
+		permissionHolderParameter := permission.Holder.Parameter
 		permission := client.Permission{
 			Key:         strconv.Itoa(permission.ID),
 			Name:        permission.Permission,
 			Type:        permission.Holder.Type,
 			Description: permission.Self,
 		}
-		res, err := permissionResource(ctx, permission, parentResourceID)
+		res, err := permissionResource(ctx, permission, permissionHolderParameter, parentResourceID)
 		if err != nil {
 			return nil, "", nil, err
 		}
-
 		ret = append(ret, res)
 	}
 
@@ -98,7 +107,27 @@ func (r *permissionBuilder) Entitlements(ctx context.Context, resource *v2.Resou
 
 func (r *permissionBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	var rv []*v2.Grant
+
 	permissionName := resource.DisplayName
+
+	groupTrait, err := sdkResource.GetGroupTrait(resource)
+	if err != nil {
+		return nil, "", nil, fmt.Errorf("list-grants: failed to get group trait from group: %w", err)
+	}
+	groupProfile := groupTrait.GetProfile()
+
+	roleId, ok := sdkResource.GetProfileInt64Value(groupProfile, "permission_holder_parameter")
+	if ok && roleId != 0 {
+		rID, err := sdkResource.NewResourceID(roleResourceType, roleId)
+		if err != nil {
+			return nil, "", nil, fmt.Errorf("list-grants: error creating principal id: %w", err)
+		}
+		membershipGrant := grant.NewGrant(resource, permissionName, rID)
+		rv = append(rv, membershipGrant)
+		return rv, "", nil, nil
+	}
+
+	// Fall back to original behavior if role id not present on trait
 	permissions, err := r.client.ListAllPermissionScheme(ctx)
 	if err != nil {
 		return nil, "", nil, err
@@ -110,16 +139,11 @@ func (r *permissionBuilder) Grants(ctx context.Context, resource *v2.Resource, p
 		}
 
 		roleId, _ := strconv.Atoi(permission.Holder.Parameter)
-		rs, err := roleResource(ctx, client.RolesAPIData{
-			ID:          roleId,
-			Name:        permission.Holder.ProjectRole.Name,
-			Description: permission.Holder.ProjectRole.Description,
-		}, nil)
+		rID, err := sdkResource.NewResourceID(roleResourceType, roleId)
 		if err != nil {
-			return nil, "", nil, err
+			return nil, "", nil, fmt.Errorf("list-grants: error creating principal id: %w", err)
 		}
-
-		membershipGrant := grant.NewGrant(resource, permission.Permission, rs.Id)
+		membershipGrant := grant.NewGrant(resource, permission.Permission, rID)
 		rv = append(rv, membershipGrant)
 	}
 

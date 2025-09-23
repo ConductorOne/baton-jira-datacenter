@@ -79,7 +79,7 @@ func (u *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 // Users include a UserTrait because they are the 'shape' of a standard user.
 func (u *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	var ret []*v2.Resource
-	users, err := u.client.ListAllUsers(ctx)
+	users, nextToken, err := u.client.ListUsersPaginated(ctx, pToken.Token)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -93,7 +93,7 @@ func (u *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 		ret = append(ret, res)
 	}
 
-	return ret, "", nil, nil
+	return ret, nextToken, nil, nil
 }
 
 // Entitlements always returns an empty slice for users.
