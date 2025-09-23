@@ -2,7 +2,6 @@ package connector
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -152,12 +151,10 @@ func (g *groupBuilder) Entitlements(ctx context.Context, resource *v2.Resource, 
 func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	var rv []*v2.Grant
 	groupId := resource.Id.Resource
-	groupMembers, err := g.client.GetGroupMembers(ctx, groupId)
+	groupMembers, nextPage, err := g.client.GetGroupMembersPaginated(ctx, groupId, pToken.Token)
 	if err != nil {
 		return nil, "", nil, err
 	}
-
-	l := ctxzap.Extract(ctx)
 
 	groupTrait, err := sdkResource.GetGroupTrait(resource)
 	if err != nil {
@@ -174,29 +171,21 @@ func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 	}
 
 	for _, member := range groupMembers {
-		user, err := g.client.GetUser(ctx, member.Name)
+		userRID, err := sdkResource.NewResourceID(userResourceType, member.Key)
 		if err != nil {
-			if errors.Is(err, client.ErrUserNotFound) {
-				l.Warn("User not found", zap.String("userId", member.Name))
-				continue
-			}
-			return nil, "", nil, err
-		}
-		ur, err := userResource(user)
-		if err != nil {
-			return nil, "", nil, err
+			return nil, "", nil, fmt.Errorf("list-grants: error creating principal id: %w", err)
 		}
 
 		for _, role := range roles {
 			permission := role.Text
 
-			membershipGrant := grant.NewGrant(resource, permission, ur.Id)
+			membershipGrant := grant.NewGrant(resource, permission, userRID)
 			rv = append(rv, membershipGrant)
 		}
 
-		rv = append(rv, grant.NewGrant(resource, _member, ur.Id))
+		rv = append(rv, grant.NewGrant(resource, _member, userRID))
 	}
-	return rv, "", nil, nil
+	return rv, nextPage, nil, nil
 }
 
 func (g *groupBuilder) Grant(ctx context.Context, principal *v2.Resource, entitlement *v2.Entitlement) (annotations.Annotations, error) {
