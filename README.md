@@ -1,6 +1,6 @@
 ![Baton Logo](./docs/images/baton-logo.png)
 
-# `baton-jira-datacenter` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-jira-datacenter.svg)](https://pkg.go.dev/github.com/conductorone/baton-jira-datacenter) ![main ci](https://github.com/conductorone/baton-jira-datacenter/actions/workflows/main.yaml/badge.svg)
+# `baton-jira-datacenter` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-jira-datacenter.svg)](https://pkg.go.dev/github.com/conductorone/baton-jira-datacenter) ![ci](https://github.com/conductorone/baton-jira-datacenter/actions/workflows/ci.yaml/badge.svg) ![verify](https://github.com/conductorone/baton-jira-datacenter/actions/workflows/verify.yaml/badge.svg)
 
 `baton-jira-datacenter` is a connector for jira-datacenter built using the [Baton SDK](https://github.com/conductorone/baton-sdk). It communicates with the jira-datacenter API to sync data about users and roles.
 
@@ -10,8 +10,8 @@ Check out [Baton](https://github.com/conductorone/baton) to learn more about the
 
 A docker compose file exists to help you start up a local Jira Data Center instance.
 
-It is recommended that you run this on a linux amd64 machine. This is due to the 
-fact that Atlassian does not ship ARM containers, so emulated performance is 
+It is recommended that you run this on a linux amd64 machine. This is due to the
+fact that Atlassian does not ship ARM containers, so emulated performance is
 poor on an ARM macbook.
 
 ## Start Jira Data Center
@@ -27,7 +27,7 @@ In your Atlassian application go to:
 1) In Jira, select your profile picture at the top right of the screen, then choose Profile. Once you access your profile, select Personal Access Tokens in the left-hand menu.
 2) Select Create token.
 3) Give your new token a name.
-4) Optionally, for security reasons, you can set your token to automatically expire after a set number of days. 
+4) Optionally, for security reasons, you can set your token to automatically expire after a set number of days.
 
 Note: Even though, every user can generate a personal access token, you must be an admin in order to sync resources.
 
@@ -63,7 +63,7 @@ baton resources
 - Groups
 - Roles
 - Permissions
-- Tickets 
+- Tickets
 - Projects
 
 # Contributing, Support and Issues
