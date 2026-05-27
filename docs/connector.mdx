@@ -169,7 +169,7 @@ spec:
     spec:
       containers:
       - name: baton-jira-datacenter
-        image: ghcr.io/conductorone/baton-jira-datacenter:latest
+        image: public.ecr.aws/conductorone/baton-jira-datacenter:latest
         imagePullPolicy: IfNotPresent
         env:
         - name: BATON_HOST_ID
@@ -193,5 +193,3 @@ spec:
 **Done.** Your Jira Data Center connector is now pulling access data into C1.
 </Tab>
 </Tabs>
-
-
