@@ -42,7 +42,7 @@ baton resources
 ## docker
 
 ```
-docker run --rm -v $(pwd):/out -e BATON_ACCESS_TOKEN=access_token -e BATON_INSTANCE_URL=instance_url ghcr.io/conductorone/baton-jira-datacenter:latest -f "/out/sync.c1z"
+docker run --rm -v $(pwd):/out -e BATON_ACCESS_TOKEN=access_token -e BATON_INSTANCE_URL=instance_url public.ecr.aws/conductorone/baton-jira-datacenter:latest -f "/out/sync.c1z"
 docker run --rm -v $(pwd):/out ghcr.io/conductorone/baton:latest -f "/out/sync.c1z" resources
 ```
 
